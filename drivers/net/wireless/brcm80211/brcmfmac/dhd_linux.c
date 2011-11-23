@@ -422,6 +422,12 @@ void brcmf_rx_frame(struct device *dev, int ifidx,
 			continue;
 		}
 
+		if (!ifp || !ifp->ndev ||
+		    ifp->ndev->reg_state != NETREG_REGISTERED) {
+			brcmu_pkt_buf_free_skb(skb);
+			continue;
+		}
+
 		skb->dev = ifp->ndev;
 		skb->protocol = eth_type_trans(skb, skb->dev);
 
