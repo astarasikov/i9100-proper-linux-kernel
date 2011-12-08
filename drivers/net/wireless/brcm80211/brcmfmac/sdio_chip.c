@@ -70,6 +70,18 @@ static const struct sdiod_drive_str sdiod_drvstr_tab1_1v8[] = {
 	{0, 0x1}
 };
 
+/* SDIO Drive Strength to sel value table for PMU Rev 11 (1.8V) */
+static const struct sdiod_drive_str sdiod_drvstr_tab4_1v8[] = {
+	{32, 0x6},
+	{26, 0x7},
+	{22, 0x4},
+	{16, 0x5},
+	{12, 0x2},
+	{8, 0x3},
+	{4, 0x0},
+	{0, 0x1}
+};
+
 u8
 brcmf_sdio_chip_getinfidx(struct chip_info *ci, u16 coreid)
 {
@@ -567,6 +579,11 @@ brcmf_sdio_chip_drivestrengthinit(struct brcmf_sdio_dev *sdiodev,
 	switch (SDIOD_DRVSTR_KEY(ci->chip, ci->pmurev)) {
 	case SDIOD_DRVSTR_KEY(BCM4330_CHIP_ID, 12):
 		str_tab = (struct sdiod_drive_str *)&sdiod_drvstr_tab1_1v8;
+		str_mask = 0x00003800;
+		str_shift = 11;
+		break;
+	case SDIOD_DRVSTR_KEY(BCM4330_CHIP_ID, 12):
+		str_tab = (struct sdiod_drive_str *)&sdiod_drvstr_tab4_1v8;
 		str_mask = 0x00003800;
 		str_shift = 11;
 		break;
