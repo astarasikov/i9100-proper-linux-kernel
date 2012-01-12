@@ -825,17 +825,19 @@ static struct s3c_sdhci_platdata i9100_hsmmc0_pdata __initdata = {
 				MMC_CAP_DISABLE | MMC_CAP_ERASE),
 	.cd_type		= S3C_SDHCI_CD_PERMANENT,
 	.clk_type		= S3C_SDHCI_CLK_DIV_EXTERNAL,
+	.cfg_gpio = exynos4_setup_sdhci0_cfg_gpio,
 };
 
 static struct s3c_sdhci_platdata i9100_hsmmc2_pdata __initdata = {
-	.cd_type		= S3C_SDHCI_CD_EXTERNAL,
+	.cd_type		= S3C_SDHCI_CD_GPIO,
 	.clk_type		= S3C_SDHCI_CLK_DIV_EXTERNAL,
 	.ext_cd_gpio	= GPIO_HSMMC2_CD,
-	.ext_cd_gpio_invert = true,
+	.ext_cd_gpio_invert = 1,
 	.host_caps = MMC_CAP_4_BIT_DATA |
 				MMC_CAP_MMC_HIGHSPEED | MMC_CAP_SD_HIGHSPEED |
 				MMC_CAP_DISABLE,
 	.max_width		= 4,
+	.cfg_gpio = exynos4_setup_sdhci2_cfg_gpio,
 };
 
 static struct s3c_sdhci_platdata i9100_hsmmc3_pdata __initdata = {
@@ -844,6 +846,7 @@ static struct s3c_sdhci_platdata i9100_hsmmc3_pdata __initdata = {
 	.max_width		= 4,
 	.host_caps		= MMC_CAP_4_BIT_DATA |
 				MMC_CAP_MMC_HIGHSPEED | MMC_CAP_SD_HIGHSPEED,
+	.cfg_gpio = exynos4_setup_sdhci3_cfg_gpio,
 };
 
 /******************************************************************************
@@ -1307,6 +1310,10 @@ static void __init i9100_machine_init(void) {
 	i9100_pmic_init();
 
 	i9100_config_gpio_table();
+
+	//XXX: use rfkill with callback or fix s3d-sdhci
+	s3c_gpio_cfgpin(GPIO_WLAN_EN, S3C_GPIO_OUTPUT);
+	gpio_set_value(GPIO_WLAN_EN, 1);
 	
 	s3c_sdhci0_set_platdata(&i9100_hsmmc0_pdata);
 	s3c_sdhci2_set_platdata(&i9100_hsmmc2_pdata);
