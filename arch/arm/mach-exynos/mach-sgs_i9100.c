@@ -701,6 +701,8 @@ static void __init i9100_init_fb(void) {
 #ifdef CONFIG_EXYNOS4_SDHCI_CH2_8BIT
 	.max_width		= 8,
 	.host_caps		= MMC_CAP_8_BIT_DATA,
+#else
+	.max_width		= 4,
 #endif
 };
 
