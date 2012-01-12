@@ -14,6 +14,7 @@
 #include <linux/pwm_backlight.h>
 #include <linux/gpio_keys.h>
 #include <linux/i2c.h>
+#include <linux/i2c/atmel_mxt_ts.h>
 #include <linux/regulator/machine.h>
 #include <linux/regulator/fixed.h>
 #include <linux/mfd/max8997.h>
@@ -545,6 +546,39 @@ static struct platform_device i9100_device_gpio_keys = {
 		.platform_data	= &i9100_gpio_keys_data,
 	},
 };
+
+/******************************************************************************
+ * touchscreen
+ *****************************************************************************/
+static struct mxt_platform_data qt602240_platform_data = {
+	.x_line		= 19,
+	.y_line		= 11,
+	.x_size		= 800,
+	.y_size		= 480,
+	.blen		= 0x11,
+	.threshold	= 0x28,
+	.voltage	= 2800000,
+	.orient	= MXT_DIAGONAL,
+};
+
+static struct i2c_board_info i2c3_devs[] __initdata = {
+	{
+		I2C_BOARD_INFO("qt602240_ts", 0x4a),
+		.platform_data = &qt602240_platform_data,
+	},
+};
+
+static void __init i9100_init_tsp(void) {
+	gpio_request(GPIO_TSP_INT, "TOUCH_INT");
+	s3c_gpio_cfgpin(GPIO_TSP_INT, S3C_GPIO_SFN(0xf));
+	s3c_gpio_setpull(GPIO_TSP_INT, S3C_GPIO_PULL_NONE);
+
+
+	gpio_request(GPIO_TSP_LDO_ON, "TOUCH_LDO");
+	s3c_gpio_cfgpin(GPIO_TSP_LDO_ON, S3C_GPIO_OUTPUT);
+	s3c_gpio_setpull(GPIO_TSP_LDO_ON, S3C_GPIO_PULL_NONE);
+	gpio_set_value(GPIO_TSP_LDO_ON, 1);
+}
 
 /******************************************************************************
  * framebuffer
@@ -1165,6 +1199,7 @@ static void __init i9100_init_usb(void) {
 static struct platform_device *i9100_devices[] __initdata = {
 	&s3c_device_i2c0,
 	&s3c_device_i2c5,
+	&s3c_device_i2c3,
 	&emmc_fixed_voltage,
 	&s3c_device_rtc,
 	&s3c_device_hsmmc0,
@@ -1223,12 +1258,16 @@ static void __init i9100_machine_init(void) {
 	s3c_sdhci0_set_platdata(&i9100_hsmmc0_pdata);
 	s3c_sdhci2_set_platdata(&i9100_hsmmc2_pdata);
 	s3c_sdhci3_set_platdata(&i9100_hsmmc3_pdata);
+	
+	s3c_i2c3_set_platdata(NULL);
+	i2c_register_board_info(3, i2c3_devs, ARRAY_SIZE(i2c3_devs));
 
 	s3c_i2c5_set_platdata(NULL);
 	i2c5_devs[0].irq = gpio_to_irq(GPIO_PMIC_IRQ);
 	i2c_register_board_info(5, i2c5_devs, ARRAY_SIZE(i2c5_devs));
 	
 	i9100_init_fb();
+	i9100_init_tsp();
 	i9100_init_usb();
 	clk_xusbxti.rate = 24000000,
 	
