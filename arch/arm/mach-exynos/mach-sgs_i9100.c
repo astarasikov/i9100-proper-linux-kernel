@@ -14,6 +14,8 @@
 #include <linux/pwm_backlight.h>
 #include <linux/gpio_keys.h>
 #include <linux/i2c.h>
+#include <linux/i2c-gpio.h>
+#include <linux/i2c/mcs.h>
 #include <linux/i2c/atmel_mxt_ts.h>
 #include <linux/regulator/machine.h>
 #include <linux/regulator/fixed.h>
@@ -46,6 +48,14 @@
 #include <mach/ohci.h>
 #include <mach/map.h>
 #include <mach/sgs_i9100.h>
+
+enum fixed_regulator_id {
+	FIXED_REG_ID_MMC = 0,
+};
+
+enum i2c_bus_ids {
+	I2C_GPIO_BUS_TOUCHKEY = 8,
+};
 
 /******************************************************************************
  * UART 
@@ -98,10 +108,6 @@ static struct s3c2410_uartcfg i9100_uartcfgs[] __initdata = {
 /******************************************************************************
  * voltage regulator
  *****************************************************************************/
-enum fixed_regulator_id {
-	FIXED_REG_ID_MMC = 0,
-};
-
 static struct regulator_consumer_supply ldo1_supply[] = {
 	REGULATOR_SUPPLY("vdd", "s5p-adc"), /* Used by CPU's ADC drv */
 };
@@ -546,6 +552,51 @@ static struct platform_device i9100_device_gpio_keys = {
 		.platform_data	= &i9100_gpio_keys_data,
 	},
 };
+
+/******************************************************************************
+ * touch keys
+ *****************************************************************************/
+static struct i2c_gpio_platform_data i2c_gpio_touchkey_data = {
+	.sda_pin	= GPIO_3_TOUCH_SDA,
+	.scl_pin	= GPIO_3_TOUCH_SCL,
+};
+
+static struct platform_device i2c_gpio_touchkey = {
+	.name		= "i2c-gpio",
+	.id		= I2C_GPIO_BUS_TOUCHKEY,
+	.dev		= {
+		.platform_data	= &i2c_gpio_touchkey_data,
+	},
+};
+
+static uint32_t touchkey_keymap[] = {
+	MCS_KEY_MAP(0, KEY_MENU),
+	MCS_KEY_MAP(1, KEY_BACK),
+};
+
+static struct mcs_platform_data touchkey_data = {
+	.keymap		= touchkey_keymap,
+	.keymap_size	= ARRAY_SIZE(touchkey_keymap),
+	.key_maxval	= 2,
+};
+
+static struct i2c_board_info i2c_gpio_touchkey_devs[] __initdata = {
+	{
+		I2C_BOARD_INFO("mcs5080_touchkey", 0x20),
+		.platform_data = &touchkey_data,
+	},
+};
+
+static void __init i9100_init_touchkey(void)
+{
+	gpio_request(GPIO_3_TOUCH_INT, "3_TOUCH_INT");
+	s5p_register_gpio_interrupt(GPIO_3_TOUCH_INT);
+	s3c_gpio_cfgpin(GPIO_3_TOUCH_INT, S3C_GPIO_SFN(0xf));
+	i2c_gpio_touchkey_devs[0].irq = gpio_to_irq(GPIO_3_TOUCH_INT);
+
+	i2c_register_board_info(I2C_GPIO_BUS_TOUCHKEY,
+		i2c_gpio_touchkey_devs, ARRAY_SIZE(i2c_gpio_touchkey_devs));
+}
 
 /******************************************************************************
  * touchscreen
@@ -1229,6 +1280,7 @@ static struct platform_device *i9100_devices[] __initdata = {
 	&exynos4_device_ohci,
 	&s3c_device_usbgadget,
 	&i9100_device_gpio_keys,
+	&i2c_gpio_touchkey,
 };
 
 static void __init i9100_pmic_init(void) {
@@ -1267,6 +1319,7 @@ static void __init i9100_machine_init(void) {
 	i2c_register_board_info(5, i2c5_devs, ARRAY_SIZE(i2c5_devs));
 	
 	i9100_init_fb();
+	i9100_init_touchkey();
 	i9100_init_tsp();
 	i9100_init_usb();
 	clk_xusbxti.rate = 24000000,
