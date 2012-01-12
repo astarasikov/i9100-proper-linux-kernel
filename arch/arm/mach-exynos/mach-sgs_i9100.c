@@ -828,26 +828,22 @@ static struct s3c_sdhci_platdata i9100_hsmmc0_pdata __initdata = {
 };
 
 static struct s3c_sdhci_platdata i9100_hsmmc2_pdata __initdata = {
-	.cd_type		= S3C_SDHCI_CD_PERMANENT,
+	.cd_type		= S3C_SDHCI_CD_EXTERNAL,
 	.clk_type		= S3C_SDHCI_CLK_DIV_EXTERNAL,
-//	.ext_cd_gpio	= GPIO_HSMMC2_CD,
-//	.ext_cd_gpio_invert = true,
-#ifdef CONFIG_EXYNOS4_SDHCI_CH2_8BIT
-	.max_width		= 8,
-	.host_caps		= MMC_CAP_8_BIT_DATA |
-				MMC_CAP_MMC_HIGHSPEED | MMC_CAP_SD_HIGHSPEED |
-				MMC_CAP_DISABLE,
-#else
+	.ext_cd_gpio	= GPIO_HSMMC2_CD,
+	.ext_cd_gpio_invert = true,
 	.host_caps = MMC_CAP_4_BIT_DATA |
 				MMC_CAP_MMC_HIGHSPEED | MMC_CAP_SD_HIGHSPEED |
 				MMC_CAP_DISABLE,
 	.max_width		= 4,
-#endif
 };
 
 static struct s3c_sdhci_platdata i9100_hsmmc3_pdata __initdata = {
 	.cd_type		= S3C_SDHCI_CD_PERMANENT,
 	.clk_type		= S3C_SDHCI_CLK_DIV_EXTERNAL,
+	.max_width		= 4,
+	.host_caps		= MMC_CAP_4_BIT_DATA |
+				MMC_CAP_MMC_HIGHSPEED | MMC_CAP_SD_HIGHSPEED,
 };
 
 /******************************************************************************
