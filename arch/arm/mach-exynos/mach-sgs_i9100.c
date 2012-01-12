@@ -55,6 +55,11 @@ enum fixed_regulator_id {
 
 enum i2c_bus_ids {
 	I2C_GPIO_BUS_TOUCHKEY = 8,
+	I2C_GPIO_BUS_GAUGE,
+	I2C_GPIO_BUS_USB,
+	I2C_GPIO_BUS_PROX,
+	I2C_GPIO_BUS_MHL,
+	I2C_GPIO_BUS_FM,
 };
 
 /******************************************************************************
@@ -623,7 +628,7 @@ static void __init i9100_init_tsp(void) {
 	gpio_request(GPIO_TSP_INT, "TOUCH_INT");
 	s3c_gpio_cfgpin(GPIO_TSP_INT, S3C_GPIO_SFN(0xf));
 	s3c_gpio_setpull(GPIO_TSP_INT, S3C_GPIO_PULL_NONE);
-
+	i2c3_devs[0].irq = gpio_to_irq(GPIO_TSP_INT);
 
 	gpio_request(GPIO_TSP_LDO_ON, "TOUCH_LDO");
 	s3c_gpio_cfgpin(GPIO_TSP_LDO_ON, S3C_GPIO_OUTPUT);
