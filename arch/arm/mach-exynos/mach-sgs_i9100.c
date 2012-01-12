@@ -15,6 +15,7 @@
 #include <linux/gpio_keys.h>
 #include <linux/i2c.h>
 #include <linux/regulator/machine.h>
+#include <linux/regulator/fixed.h>
 #include <linux/mfd/max8997.h>
 #include <linux/lcd.h>
 #include <linux/spi/spi.h>
@@ -96,6 +97,10 @@ static struct s3c2410_uartcfg i9100_uartcfgs[] __initdata = {
 /******************************************************************************
  * voltage regulator
  *****************************************************************************/
+enum fixed_regulator_id {
+	FIXED_REG_ID_MMC = 0,
+};
+
 static struct regulator_consumer_supply ldo1_supply[] = {
 	REGULATOR_SUPPLY("vdd", "s5p-adc"), /* Used by CPU's ADC drv */
 };
@@ -466,6 +471,36 @@ static struct i2c_board_info i2c5_devs[] __initdata = {
 	},
 };
 
+static struct regulator_consumer_supply emmc_supplies[] = {
+	REGULATOR_SUPPLY("vmmc", "s3c-sdhci.0"),
+	REGULATOR_SUPPLY("vmmc", "dw_mmc"),
+};
+
+static struct regulator_init_data emmc_fixed_voltage_init_data = {
+	.constraints		= {
+		.name		= "VMEM_VDD_2.8V",
+		.valid_ops_mask	= REGULATOR_CHANGE_STATUS,
+	},
+	.num_consumer_supplies	= ARRAY_SIZE(emmc_supplies),
+	.consumer_supplies	= emmc_supplies,
+};
+
+static struct fixed_voltage_config emmc_fixed_voltage_config = {
+	.supply_name		= "MASSMEMORY_EN (inverted)",
+	.microvolts		= 2800000,
+	.gpio			= GPIO_MASSMEM_EN,
+	.enable_high		= false,
+	.init_data		= &emmc_fixed_voltage_init_data,
+};
+
+static struct platform_device emmc_fixed_voltage = {
+	.name			= "reg-fixed-voltage",
+	.id			= FIXED_REG_ID_MMC,
+	.dev			= {
+		.platform_data	= &emmc_fixed_voltage_config,
+	},
+};
+
 /******************************************************************************
  * gpio keys
  ******************************************************************************/
@@ -693,15 +728,29 @@ static void __init i9100_init_fb(void) {
 /******************************************************************************
  * sdhci
  ******************************************************************************/
- static struct s3c_sdhci_platdata i9100_hsmmc2_pdata __initdata = {
-	.cd_type		= S3C_SDHCI_CD_GPIO,
+static struct s3c_sdhci_platdata i9100_hsmmc0_pdata __initdata = {
+	.max_width		= 8,
+	.host_caps		= (MMC_CAP_8_BIT_DATA | MMC_CAP_4_BIT_DATA |
+				MMC_CAP_MMC_HIGHSPEED | MMC_CAP_SD_HIGHSPEED |
+				MMC_CAP_DISABLE | MMC_CAP_ERASE),
+	.cd_type		= S3C_SDHCI_CD_PERMANENT,
 	.clk_type		= S3C_SDHCI_CLK_DIV_EXTERNAL,
-	.ext_cd_gpio	= GPIO_HSMMC2_CD,
-	.ext_cd_gpio_invert = true,
+};
+
+static struct s3c_sdhci_platdata i9100_hsmmc2_pdata __initdata = {
+	.cd_type		= S3C_SDHCI_CD_PERMANENT,
+	.clk_type		= S3C_SDHCI_CLK_DIV_EXTERNAL,
+//	.ext_cd_gpio	= GPIO_HSMMC2_CD,
+//	.ext_cd_gpio_invert = true,
 #ifdef CONFIG_EXYNOS4_SDHCI_CH2_8BIT
 	.max_width		= 8,
-	.host_caps		= MMC_CAP_8_BIT_DATA,
+	.host_caps		= MMC_CAP_8_BIT_DATA |
+				MMC_CAP_MMC_HIGHSPEED | MMC_CAP_SD_HIGHSPEED |
+				MMC_CAP_DISABLE,
 #else
+	.host_caps = MMC_CAP_4_BIT_DATA |
+				MMC_CAP_MMC_HIGHSPEED | MMC_CAP_SD_HIGHSPEED |
+				MMC_CAP_DISABLE,
 	.max_width		= 4,
 #endif
 };
@@ -1116,7 +1165,9 @@ static void __init i9100_init_usb(void) {
 static struct platform_device *i9100_devices[] __initdata = {
 	&s3c_device_i2c0,
 	&s3c_device_i2c5,
+	&emmc_fixed_voltage,
 	&s3c_device_rtc,
+	&s3c_device_hsmmc0,
 	&s3c_device_hsmmc2,
 	&s3c_device_hsmmc3,
 	&s5p_device_fimc0,
@@ -1168,7 +1219,8 @@ static void __init i9100_machine_init(void) {
 	i9100_pmic_init();
 
 	i9100_config_gpio_table();
-
+	
+	s3c_sdhci0_set_platdata(&i9100_hsmmc0_pdata);
 	s3c_sdhci2_set_platdata(&i9100_hsmmc2_pdata);
 	s3c_sdhci3_set_platdata(&i9100_hsmmc3_pdata);
 
