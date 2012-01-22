@@ -1379,7 +1379,46 @@ static void __init i9100_init_usb(void) {
 /******************************************************************************
  * usb switch
  ******************************************************************************/
-static struct i2c_gpio_platform_data i2c_gpio_usb_data = {
+static struct i2c_gpio_platform_data i2c_gpio_fm_data = {
+	.sda_pin	= GPIO_FM_SDA_28V,
+	.scl_pin	= GPIO_FM_SCL_28V,
+	.udelay		= 2,
+};
+
+struct platform_device i2c_gpio_fm = {
+	.name = "i2c-gpio",
+	.id = I2C_GPIO_BUS_FM,
+	.dev.platform_data = &i2c_gpio_fm_data,
+};
+
+static struct i2c_board_info i2c_gpio_fm_devs[] __initdata = {
+	{
+		I2C_BOARD_INFO("si470x", 0x10),
+	},
+};
+
+static void __init i9100_init_fm(void)
+{
+	gpio_request(GPIO_FM_INT, "FM IRQ");
+	s5p_register_gpio_interrupt(GPIO_FM_INT);
+	s3c_gpio_cfgpin(GPIO_FM_INT, S3C_GPIO_SFN(0xF));
+	s3c_gpio_setpull(GPIO_FM_INT, S3C_GPIO_PULL_UP);
+	i2c_gpio_fm_devs[0].irq = gpio_to_irq(GPIO_FM_INT);
+	
+	gpio_request(GPIO_FM_RST, "FM Reset");
+	s3c_gpio_cfgpin(GPIO_FM_RST, S3C_GPIO_OUTPUT);
+	gpio_set_value(GPIO_FM_RST, 0);
+	msleep(1);
+	gpio_set_value(GPIO_FM_RST, 1);
+	msleep(2);
+
+	i2c_register_board_info(I2C_GPIO_BUS_FM,
+		i2c_gpio_fm_devs, ARRAY_SIZE(i2c_gpio_fm_devs));
+}
+/******************************************************************************
+ * FM Radio
+ ******************************************************************************/
+ static struct i2c_gpio_platform_data i2c_gpio_usb_data = {
 	.sda_pin	= GPIO_USB_SDA,
 	.scl_pin	= GPIO_USB_SCL,
 };
@@ -1444,6 +1483,7 @@ static struct platform_device *i9100_devices[] __initdata = {
 	&i9100_device_gpio_keys,
 	&i2c_gpio_touchkey,
 	&i2c_gpio_usb,
+	&i2c_gpio_fm,
 };
 
 static void __init i9100_pmic_init(void) {
@@ -1490,7 +1530,8 @@ static void __init i9100_machine_init(void) {
 	i9100_init_touchkey();
 	i9100_init_usb();
 	i9100_init_usb_switch();
-	clk_xusbxti.rate = 24000000,
+	clk_xusbxti.rate = 24000000;
+	i9100_init_fm();
 	
 	platform_add_devices(i9100_devices, ARRAY_SIZE(i9100_devices));
 
