@@ -155,7 +155,7 @@ static struct regulator_consumer_supply ldo10_supply[] = {
 };
 
 static struct regulator_consumer_supply ldo11_supply[] = {
-	REGULATOR_SUPPLY("touch", NULL),
+	REGULATOR_SUPPLY("touchkey", NULL),
 };
 
 static struct regulator_consumer_supply ldo12_supply[] = {
@@ -254,7 +254,7 @@ VREG(ldo5, "VHSIC_1.2V", 1200000, 1200000, 1,  REGULATOR_CHANGE_STATUS);
 VREG(ldo7, "CAM_ISP_1.8V", 1800000, 1800000, 0,  REGULATOR_CHANGE_STATUS);
 VREG(ldo8, "VUSB_3.3V", 3300000, 3300000, 1,  REGULATOR_CHANGE_STATUS);
 VREG(ldo10, "VPLL_1.2V", 1200000, 1200000, 1,  REGULATOR_CHANGE_STATUS);
-VREG(ldo11, "TOUCH_2.8V", 2800000, 2800000, 0,  REGULATOR_CHANGE_STATUS);
+VREG(ldo11, "TOUCH_2.8V", 2800000, 2800000, 1,  REGULATOR_CHANGE_STATUS);
 VREG(ldo12, "VT_CAM_1.8V", 1800000, 1800000, 0,  REGULATOR_CHANGE_STATUS);
 VREG(ldo13, "VCC_3.0V_LCD", 3000000, 3000000, 1,  REGULATOR_CHANGE_STATUS);
 VREG(ldo14, "VCC_2.8V_MOTOR", 2800000, 2800000, 0,  REGULATOR_CHANGE_STATUS);
@@ -578,6 +578,7 @@ static struct platform_device i9100_device_gpio_keys = {
 static struct i2c_gpio_platform_data i2c_gpio_touchkey_data = {
 	.sda_pin	= GPIO_3_TOUCH_SDA,
 	.scl_pin	= GPIO_3_TOUCH_SCL,
+	.udelay		= 2,
 };
 
 static struct platform_device i2c_gpio_touchkey = {
@@ -588,6 +589,24 @@ static struct platform_device i2c_gpio_touchkey = {
 	},
 };
 
+static void i9100_mcs_power(bool on) {
+	struct regulator *regulator;
+	regulator = regulator_get(NULL, "touchkey");
+	if (IS_ERR(regulator)) {
+		pr_err("%s: failed to get regulator\n", __func__);
+		return;
+	}
+
+	if (on) {
+		regulator_enable(regulator);
+	} else {
+		if (regulator_is_enabled(regulator))
+			regulator_force_disable(regulator);
+	}
+
+	regulator_put(regulator);
+}
+
 static uint32_t touchkey_keymap[] = {
 	MCS_KEY_MAP(0, KEY_MENU),
 	MCS_KEY_MAP(1, KEY_BACK),
@@ -597,6 +616,7 @@ static struct mcs_platform_data touchkey_data = {
 	.keymap		= touchkey_keymap,
 	.keymap_size	= ARRAY_SIZE(touchkey_keymap),
 	.key_maxval	= 2,
+	.poweron = i9100_mcs_power,
 };
 
 static struct i2c_board_info i2c_gpio_touchkey_devs[] __initdata = {
