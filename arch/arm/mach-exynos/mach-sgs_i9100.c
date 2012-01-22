@@ -623,6 +623,7 @@ static struct mxt_platform_data qt602240_platform_data = {
 	.threshold	= 0x28,
 	.voltage	= 2800000,
 	.orient	= MXT_DIAGONAL,
+	.irqflags = IRQF_TRIGGER_FALLING,
 };
 
 static struct i2c_board_info i2c3_devs[] __initdata = {
@@ -632,10 +633,18 @@ static struct i2c_board_info i2c3_devs[] __initdata = {
 	},
 };
 
+static struct s3c2410_platform_i2c i2c3_data __initdata = {
+	.flags		= 0,
+	.bus_num	= 3,
+	.slave_addr	= 0x10,
+	.frequency	= 400 * 1000,
+	.sda_delay	= 100,
+};
+
 static void __init i9100_init_tsp(void) {
 	gpio_request(GPIO_TSP_INT, "TOUCH_INT");
 	s3c_gpio_cfgpin(GPIO_TSP_INT, S3C_GPIO_SFN(0xf));
-	s3c_gpio_setpull(GPIO_TSP_INT, S3C_GPIO_PULL_NONE);
+	s3c_gpio_setpull(GPIO_TSP_INT, S3C_GPIO_PULL_UP);
 	i2c3_devs[0].irq = gpio_to_irq(GPIO_TSP_INT);
 
 	gpio_request(GPIO_TSP_LDO_ON, "TOUCH_LDO");
@@ -1469,7 +1478,8 @@ static void __init i9100_machine_init(void) {
 	s3c_sdhci2_set_platdata(&i9100_hsmmc2_pdata);
 	s3c_sdhci3_set_platdata(&i9100_hsmmc3_pdata);
 	
-	s3c_i2c3_set_platdata(NULL);
+	i9100_init_tsp();
+	s3c_i2c3_set_platdata(&i2c3_data);
 	i2c_register_board_info(3, i2c3_devs, ARRAY_SIZE(i2c3_devs));
 
 	s3c_i2c5_set_platdata(NULL);
@@ -1478,7 +1488,6 @@ static void __init i9100_machine_init(void) {
 	
 	i9100_init_fb();
 	i9100_init_touchkey();
-	i9100_init_tsp();
 	i9100_init_usb();
 	i9100_init_usb_switch();
 	clk_xusbxti.rate = 24000000,
