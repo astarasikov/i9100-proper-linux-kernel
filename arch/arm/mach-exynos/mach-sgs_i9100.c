@@ -25,6 +25,9 @@
 #include <linux/spi/spi_gpio.h>
 #include <linux/platform_data/fsa9480.h>
 
+#include <media/s5p_fimc.h>
+#include <media/v4l2-mediabus.h>
+
 #include <asm/mach/arch.h>
 #include <asm/mach-types.h>
 
@@ -45,6 +48,9 @@
 #include <plat/fb.h>
 #include <plat/mfc.h>
 #include <plat/otg.h>
+#include <plat/fimc-core.h>
+#include <plat/camport.h>
+#include <plat/mipi_csis.h>
 
 #include <mach/ohci.h>
 #include <mach/map.h>
@@ -1444,10 +1450,57 @@ static void __init i9100_init_usb_switch(void)
 	i2c_register_board_info(I2C_GPIO_BUS_USB,
 		i2c_gpio_usb_devs, ARRAY_SIZE(i2c_gpio_usb_devs));
 }
+/******************************************************************************
+ * camera
+ ******************************************************************************/
+static struct s5p_platform_mipi_csis mipi_csis_platdata = {
+	.clk_rate	= 166000000UL,
+	.lanes		= 2,
+	.alignment	= 32,
+	.hs_settle	= 12,
+	.phy_enable	= s5p_csis_phy_enable,
+};
+
+static struct i2c_board_info m5mols_board_info = {
+	I2C_BOARD_INFO("M5MOLS", 0x1F),
+};
+
+static struct s5p_fimc_isp_info i9100_camera_sensors[] = {
+	{
+		.flags		= V4L2_MBUS_PCLK_SAMPLE_FALLING |
+				  V4L2_MBUS_VSYNC_ACTIVE_LOW,
+		.bus_type	= FIMC_MIPI_CSI2,
+		.board_info	= &m5mols_board_info,
+		.clk_frequency	= 24000000UL,
+		.csi_data_align	= 32,
+	},
+};
+
+static struct s5p_platform_fimc fimc_md_platdata = {
+//	.isp_info	= i9100_camera_sensors,
+//	.num_clients	= ARRAY_SIZE(i9100_camera_sensors),
+};
+
+static void i9100_init_camera(void) {
+	s3c_set_platdata(&mipi_csis_platdata, sizeof(mipi_csis_platdata),
+			 &s5p_device_mipi_csis0);
+	s3c_set_platdata(&fimc_md_platdata,  sizeof(fimc_md_platdata),
+			 &s5p_device_fimc_md);
+	
+	if (exynos4_fimc_setup_gpio(S5P_CAMPORT_A)) {
+		pr_err("%s: Camera port A setup failed\n", __func__);
+		return;
+	}
+ }
 
 /******************************************************************************
  * platform devices
  ******************************************************************************/
+/* DEVFREQ controlling memory/bus */
+static struct platform_device exynos4_bus_devfreq = {
+	.name			= "exynos4210-busfreq",
+};
+
 static struct platform_device *i9100_devices[] __initdata = {
 	&s3c_device_i2c5,
 	&s3c_device_i2c0,
@@ -1457,11 +1510,11 @@ static struct platform_device *i9100_devices[] __initdata = {
 	&s3c_device_hsmmc0,
 	&s3c_device_hsmmc2,
 	&s3c_device_hsmmc3,
+	&s5p_device_mipi_csis0,
 	&s5p_device_fimc0,
 	&s5p_device_fimc1,
 	&s5p_device_fimc2,
 	&s5p_device_fimc3,
-	&s5p_device_fimc_md,
 	&s5p_device_fimd0,
 	&s5p_device_g2d,
 	&s5p_device_mfc,
@@ -1474,12 +1527,14 @@ static struct platform_device *i9100_devices[] __initdata = {
 	&exynos4_device_pd[PD_CAM],
 	&exynos4_device_pd[PD_GPS],
 	&exynos4_device_pd[PD_TV],
+	&s5p_device_fimc_md,
 	&exynos4_device_tmu,
 
 	&lcd_spi_gpio,
 	&s3c_device_usbgadget,
 	&s5p_device_ehci,
 	&exynos4_device_ohci,
+	&exynos4_bus_devfreq,
 	&i9100_device_gpio_keys,
 	&i2c_gpio_touchkey,
 	&i2c_gpio_usb,
@@ -1532,11 +1587,17 @@ static void __init i9100_machine_init(void) {
 	i9100_init_usb_switch();
 	clk_xusbxti.rate = 24000000;
 	i9100_init_fm();
+	i9100_init_camera();
 	
 	platform_add_devices(i9100_devices, ARRAY_SIZE(i9100_devices));
 
 	s5p_device_mfc.dev.parent = &exynos4_device_pd[PD_MFC].dev;
 	s5p_device_fimd0.dev.parent = &exynos4_device_pd[PD_LCD0].dev;
+	s5p_device_fimc0.dev.parent = &exynos4_device_pd[PD_CAM].dev;
+	s5p_device_fimc1.dev.parent = &exynos4_device_pd[PD_CAM].dev;
+	s5p_device_fimc2.dev.parent = &exynos4_device_pd[PD_CAM].dev;
+	s5p_device_fimc3.dev.parent = &exynos4_device_pd[PD_CAM].dev;
+	s5p_device_mipi_csis0.dev.parent = &exynos4_device_pd[PD_CAM].dev;
 
 	i9100_set_usb_mipi(1);
 	i9100_set_usb_path(1);
