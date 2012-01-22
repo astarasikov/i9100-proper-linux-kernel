@@ -23,6 +23,7 @@
 #include <linux/lcd.h>
 #include <linux/spi/spi.h>
 #include <linux/spi/spi_gpio.h>
+#include <linux/platform_data/fsa9480.h>
 
 #include <asm/mach/arch.h>
 #include <asm/mach-types.h>
@@ -1245,24 +1246,165 @@ static void i9100_config_gpio_table(void)
 /******************************************************************************
  * USB
  ******************************************************************************/
+static void i9100_set_usb_path(bool to_ap) {
+	struct regulator *s1, *s2;
+
+	s1 = regulator_get(NULL, "safeout1");
+	if (!s1) {
+		pr_err("%s: failed to get safeout1\n", __func__);
+		return;
+	}
+
+	s2 = regulator_get(NULL, "safeout2");
+	if (!s2) {
+		pr_err("%s: failed to get safeout2\n", __func__);
+		goto fail_safeout2;
+	}
+
+	if (to_ap) {
+		if (!regulator_is_enabled(s1)) {
+			regulator_enable(s1);
+		}
+		if (regulator_is_enabled(s2)) {
+			regulator_force_disable(s2);
+		}
+	}
+	else {
+		if (regulator_is_enabled(s1)) {
+			regulator_force_disable(s1);
+		}
+		if (!regulator_is_enabled(s2)) {
+			regulator_enable(s2);
+		}
+	}
+
+	regulator_put(s2);
+fail_safeout2:
+	regulator_put(s1);
+}
+
+static int i9100_set_usb_mipi(bool enable)
+{
+	struct regulator *mipi11_regulator;
+	struct regulator *mipi18_regulator;
+	struct regulator *hsic12_regulator;
+	struct regulator *usb33_regulator;
+	int ret = 0;
+
+	mipi11_regulator = regulator_get(NULL, "vdd11");
+	if (IS_ERR(mipi11_regulator)) {
+		pr_err("%s: failed to get %s\n", __func__, "vdd11");
+		ret = -ENODEV;
+		goto out4;
+	}
+
+	mipi18_regulator = regulator_get(NULL, "vdd18");
+	if (IS_ERR(mipi18_regulator)) {
+		pr_err("%s: failed to get %s\n", __func__, "vdd18");
+		ret = -ENODEV;
+		goto out3;
+	}
+
+	hsic12_regulator = regulator_get(NULL, "vhsic");
+	if (IS_ERR(hsic12_regulator)) {
+		pr_err("%s: failed to get %s\n", __func__, "vhsic 1.2v");
+		ret = -ENODEV;
+		goto out2;
+	}
+
+	usb33_regulator = regulator_get(NULL, "vusb_3.3v");
+	if (IS_ERR(usb33_regulator)) {
+		pr_err("%s: failed to get %s\n", __func__, "vusb_3.3v");
+		ret = -ENODEV;
+		goto out1;
+	}
+
+	if (enable) {
+		/* Power On Sequence
+		 * MIPI 1.1V -> HSIC 1.2V -> MIPI 1.8V -> USB 3.3V
+		 */
+		pr_info("%s: enable LDOs\n", __func__);
+		if (!regulator_is_enabled(mipi11_regulator))
+			regulator_enable(mipi11_regulator);
+		if (!regulator_is_enabled(hsic12_regulator))
+			regulator_enable(hsic12_regulator);
+		if (!regulator_is_enabled(mipi18_regulator))
+			regulator_enable(mipi18_regulator);
+		if (!regulator_is_enabled(usb33_regulator))
+			regulator_enable(usb33_regulator);
+	} else {
+		/* Power Off Sequence
+		 * USB 3.3V -> MIPI 18V -> HSIC 1.2V -> MIPI 1.1V
+		 */
+		pr_info("%s: disable LDOs\n", __func__);
+		regulator_force_disable(usb33_regulator);
+		regulator_force_disable(mipi18_regulator);
+		regulator_force_disable(hsic12_regulator);
+		regulator_force_disable(mipi11_regulator);
+	}
+
+	regulator_put(usb33_regulator);
+out1:
+	regulator_put(hsic12_regulator);
+out2:
+	regulator_put(mipi18_regulator);
+out3:
+	regulator_put(mipi11_regulator);
+out4:
+	return ret;
+}
+
 static struct s5p_ehci_platdata i9100_ehci_pdata;
 static struct exynos4_ohci_platdata i9100_ohci_pdata;
 static struct s5p_otg_platdata i9100_otg_pdata;
 
 static void __init i9100_init_usb(void) {
+	gpio_request(GPIO_USB_SEL, "USB Route");
+	s3c_gpio_cfgpin(GPIO_USB_SEL, S3C_GPIO_OUTPUT);
+	gpio_set_value(GPIO_USB_SEL, 0);
+	
 	s5p_ehci_set_platdata(&i9100_ehci_pdata);
 	exynos4_ohci_set_platdata(&i9100_ohci_pdata);
 	s5p_otg_set_platdata(&i9100_otg_pdata);
+}
+/******************************************************************************
+ * usb switch
+ ******************************************************************************/
+static struct i2c_gpio_platform_data i2c_gpio_usb_data = {
+	.sda_pin	= GPIO_USB_SDA,
+	.scl_pin	= GPIO_USB_SCL,
+};
+
+struct platform_device i2c_gpio_usb = {
+	.name = "i2c-gpio",
+	.id = I2C_GPIO_BUS_USB,
+	.dev.platform_data = &i2c_gpio_usb_data,
+};
+
+static struct fsa9480_platform_data fsa9480_info = {
+};
+
+static struct i2c_board_info i2c_gpio_usb_devs[] __initdata = {
+	{
+		I2C_BOARD_INFO("fsa9480", 0x25),
+		.platform_data = &fsa9480_info,
+	},
+};
+
+static void __init i9100_init_usb_switch(void)
+{
+	i2c_register_board_info(I2C_GPIO_BUS_USB,
+		i2c_gpio_usb_devs, ARRAY_SIZE(i2c_gpio_usb_devs));
 }
 
 /******************************************************************************
  * platform devices
  ******************************************************************************/
 static struct platform_device *i9100_devices[] __initdata = {
-	&s3c_device_i2c0,
 	&s3c_device_i2c5,
-	&s3c_device_i2c3,
+	&s3c_device_i2c0,
 	&emmc_fixed_voltage,
+	&s3c_device_i2c3,
 	&s3c_device_rtc,
 	&s3c_device_hsmmc0,
 	&s3c_device_hsmmc2,
@@ -1287,11 +1429,12 @@ static struct platform_device *i9100_devices[] __initdata = {
 	&exynos4_device_tmu,
 
 	&lcd_spi_gpio,
+	&s3c_device_usbgadget,
 	&s5p_device_ehci,
 	&exynos4_device_ohci,
-	&s3c_device_usbgadget,
 	&i9100_device_gpio_keys,
 	&i2c_gpio_touchkey,
+	&i2c_gpio_usb,
 };
 
 static void __init i9100_pmic_init(void) {
@@ -1337,12 +1480,16 @@ static void __init i9100_machine_init(void) {
 	i9100_init_touchkey();
 	i9100_init_tsp();
 	i9100_init_usb();
+	i9100_init_usb_switch();
 	clk_xusbxti.rate = 24000000,
 	
 	platform_add_devices(i9100_devices, ARRAY_SIZE(i9100_devices));
 
 	s5p_device_mfc.dev.parent = &exynos4_device_pd[PD_MFC].dev;
 	s5p_device_fimd0.dev.parent = &exynos4_device_pd[PD_LCD0].dev;
+
+	i9100_set_usb_mipi(1);
+	i9100_set_usb_path(1);
 }
 
 MACHINE_START(SGS_I9100, "i9100")
