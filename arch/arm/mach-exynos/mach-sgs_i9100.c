@@ -118,15 +118,17 @@ static struct regulator_consumer_supply ldo1_supply[] = {
 };
 
 static struct regulator_consumer_supply ldo3_supply[] = {
-	REGULATOR_SUPPLY("vdd11", "s5p-mipi-csis.0"), /* MIPI */
+	//vusb_1.1v
+	REGULATOR_SUPPLY("pd_io", NULL),
+	REGULATOR_SUPPLY("vdd11", NULL), /* MIPI */
 };
 
 static struct regulator_consumer_supply ldo4_supply[] = {
-	REGULATOR_SUPPLY("vdd18", "s5p-mipi-csis.0"), /* MIPI */
+	REGULATOR_SUPPLY("vdd18", NULL), /* MIPI */
 };
 
 static struct regulator_consumer_supply ldo5_supply[] = {
-	REGULATOR_SUPPLY("vhsic", "modemctl"), /* MODEM */
+	REGULATOR_SUPPLY("vhsic", NULL), /* MODEM */
 };
 
 static struct regulator_consumer_supply ldo7_supply[] = {
@@ -134,6 +136,9 @@ static struct regulator_consumer_supply ldo7_supply[] = {
 };
 
 static struct regulator_consumer_supply ldo8_supply[] = {
+	//vusb_3.3v
+	REGULATOR_SUPPLY("pd_core", NULL),
+	REGULATOR_SUPPLY("vusb_3.3v", NULL),
 	REGULATOR_SUPPLY("vusb_d", NULL), /* Used by CPU */
 	REGULATOR_SUPPLY("vdac", NULL), /* Used by CPU */
 };
@@ -199,11 +204,13 @@ static struct regulator_consumer_supply buck7_supply[] = {
 };
 
 static struct regulator_consumer_supply safeout1_supply[] = {
-	REGULATOR_SUPPLY("usb_vbus", NULL), /* CPU's USB OTG */
+	REGULATOR_SUPPLY("safeout1", NULL),
+	//REGULATOR_SUPPLY("usb_vbus", NULL), /* CPU's USB OTG */
 };
 
 static struct regulator_consumer_supply safeout2_supply[] = {
-	REGULATOR_SUPPLY("usb_vbus", "modemctl"), /* VBUS of Modem */
+	REGULATOR_SUPPLY("safeout2", NULL),
+	//REGULATOR_SUPPLY("usb_vbus", "modemctl"), /* VBUS of Modem */
 };
 
 static struct regulator_consumer_supply led_flash_supply[] = {
@@ -355,10 +362,8 @@ static struct regulator_init_data buck7_init_data = {
 
 static struct regulator_init_data safeout1_init_data = {
 	.constraints	= {
-		.name		= "safeout1 range",
+		.name		= "SAFEOUT1",
 		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
-		.always_on	= 0,
-		.boot_on	= 1,
 		.state_mem	= {
 			.enabled = 1,
 		},
@@ -369,12 +374,10 @@ static struct regulator_init_data safeout1_init_data = {
 
 static struct regulator_init_data safeout2_init_data = {
 	.constraints	= {
-		.name		= "safeout2 range",
+		.name		= "SAFEOUT2",
 		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
-		.always_on	= 0,
-		.boot_on	= 0,
 		.state_mem	= {
-			.enabled = 1,
+			.disabled = 1,
 		},
 	},
 	.num_consumer_supplies	= ARRAY_SIZE(safeout2_supply),
@@ -441,12 +444,16 @@ static struct max8997_regulator_data __initdata i9100_max8997_regulators[] = {
 };
 
 static struct max8997_platform_data __initdata i9100_max8997_pdata = {
-	.wakeup			= 1,
-
 	.num_regulators		= ARRAY_SIZE(i9100_max8997_regulators),
 	.regulators		= i9100_max8997_regulators,
 
+	.wakeup			= true,
+	.irq_base		= IRQ_GPIO_END + 1,
+	
+	.buck125_default_idx = 0x1,
 	.buck125_gpios = {GPIO_BUCK1_EN_A, GPIO_BUCK1_EN_B, GPIO_BUCK2_EN},
+	.buck1_gpiodvs	= true,
+	.buck2_gpiodvs	= true,
 
 	.buck1_voltage[0]	= 1350000,
 	.buck1_voltage[1]	= 1300000,
