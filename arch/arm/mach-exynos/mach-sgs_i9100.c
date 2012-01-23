@@ -670,6 +670,7 @@ static struct s3c2410_platform_i2c i2c3_data __initdata = {
 
 static void __init i9100_init_tsp(void) {
 	gpio_request(GPIO_TSP_INT, "TOUCH_INT");
+	s5p_register_gpio_interrupt(GPIO_TSP_INT);
 	s3c_gpio_cfgpin(GPIO_TSP_INT, S3C_GPIO_SFN(0xf));
 	s3c_gpio_setpull(GPIO_TSP_INT, S3C_GPIO_PULL_UP);
 	i2c3_devs[0].irq = gpio_to_irq(GPIO_TSP_INT);
