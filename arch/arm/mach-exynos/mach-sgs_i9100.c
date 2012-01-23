@@ -1580,10 +1580,32 @@ static void __init i9100_reserve(void)
 	s5p_mfc_reserve_mem(0x43000000, 8 << 20, 0x51000000, 8 << 20);
 }
 
-static void __init i9100_machine_init(void) {
-	i9100_pmic_init();
+//Will be used for revision-specific gpio/regulator fixups
+static unsigned i9100_hw_revision = 0;
 
+static void __init i9100_get_revision(void) {
+	unsigned revision = 0;
+	int i;
+	int gpios_rev[] = {
+		GPIO_HW_REV0,
+		GPIO_HW_REV1,
+		GPIO_HW_REV2,
+		GPIO_HW_REV3,
+	};
+	for (i = 0; i < ARRAY_SIZE(gpios_rev); i++) {
+		gpio_request(gpios_rev[i], "HW_REV");
+		revision |= ((gpio_get_value(gpios_rev[i])) << i);
+		gpio_free(gpios_rev[i]);
+	}
+	i9100_hw_revision = revision;
+	printk(KERN_INFO "I9100 board revision %d\n", revision);
+}
+
+static void __init i9100_machine_init(void) {
+	i9100_get_revision();
 	i9100_config_gpio_table();
+
+	i9100_pmic_init();
 
 	//XXX: use rfkill with callback or fix s3d-sdhci
 	s3c_gpio_cfgpin(GPIO_WLAN_EN, S3C_GPIO_OUTPUT);
