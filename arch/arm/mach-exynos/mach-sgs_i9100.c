@@ -532,21 +532,21 @@ static struct platform_device emmc_fixed_voltage = {
  ******************************************************************************/
 static struct gpio_keys_button i9100_gpio_keys[] = {
 	{
-		.code = KEY_LEFTCTRL,
+		.code = KEY_VOLUMEUP,
 		.gpio = GPIO_VOL_UP,
 		.active_low = 1,
 		.type = EV_KEY,
 		.wakeup = 1,
 		.can_disable = 1,
 	}, {
-		.code = KEY_LEFTALT,
+		.code = KEY_VOLUMEDOWN,
 		.gpio = GPIO_VOL_DOWN,
 		.active_low = 1,
 		.type = EV_KEY,
 		.wakeup = 1,
 		.can_disable = 1,
 	}, {
-		.code = KEY_DELETE,
+		.code = KEY_POWER,
 		.gpio = GPIO_nPOWER,
 		.active_low = 1,
 		.type = EV_KEY,
