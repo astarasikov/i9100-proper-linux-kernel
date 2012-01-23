@@ -21,6 +21,7 @@
 #include <linux/regulator/fixed.h>
 #include <linux/mfd/max8997.h>
 #include <linux/lcd.h>
+#include <linux/power/max17042_battery.h>
 #include <linux/spi/spi.h>
 #include <linux/spi/spi_gpio.h>
 #include <linux/platform_data/fsa9480.h>
@@ -1403,7 +1404,7 @@ static void __init i9100_init_usb(void) {
 	s5p_otg_set_platdata(&i9100_otg_pdata);
 }
 /******************************************************************************
- * usb switch
+ * FM radio
  ******************************************************************************/
 static struct i2c_gpio_platform_data i2c_gpio_fm_data = {
 	.sda_pin	= GPIO_FM_SDA_28V,
@@ -1442,7 +1443,7 @@ static void __init i9100_init_fm(void)
 		i2c_gpio_fm_devs, ARRAY_SIZE(i2c_gpio_fm_devs));
 }
 /******************************************************************************
- * FM Radio
+ * USB switch
  ******************************************************************************/
  static struct i2c_gpio_platform_data i2c_gpio_usb_data = {
 	.sda_pin	= GPIO_USB_SDA,
@@ -1469,6 +1470,74 @@ static void __init i9100_init_usb_switch(void)
 {
 	i2c_register_board_info(I2C_GPIO_BUS_USB,
 		i2c_gpio_usb_devs, ARRAY_SIZE(i2c_gpio_usb_devs));
+}
+
+/******************************************************************************
+ * Battery gauge
+ ******************************************************************************/
+static struct i2c_gpio_platform_data i2c_gpio_gauge_data = {
+	.sda_pin	= GPIO_FUEL_SDA,
+	.scl_pin	= GPIO_FUEL_SCL,
+};
+
+struct platform_device i2c_gpio_gauge = {
+	.name = "i2c-gpio",
+	.id = I2C_GPIO_BUS_GAUGE,
+	.dev.platform_data = &i2c_gpio_gauge_data,
+};
+
+static struct max17042_reg_data i9100_max17042_regs[] = {
+	{
+		.addr = MAX17042_CGAIN,
+		.data = 0,
+	},
+	{
+		.addr = MAX17042_MiscCFG,
+		.data = 0x0003,
+	},
+	{
+		.addr = MAX17042_LearnCFG,
+		.data = 0x0007,
+	},
+	{
+		.addr = MAX17042_RCOMP0,
+		.data = 0x0050,
+	},
+	{
+		.addr = MAX17042_SALRT_Th,
+		.data = 0xff02,
+	},
+	{
+		.addr = MAX17042_VALRT_Th,
+		.data = 0xff00,
+	},
+	{
+		.addr = MAX17042_TALRT_Th,
+		.data = 0x7f80,
+	}
+};
+
+static struct max17042_platform_data i9100_max17042_data = {
+	.init_data = i9100_max17042_regs,
+	.num_init_data = ARRAY_SIZE(i9100_max17042_regs),
+};
+
+static struct i2c_board_info i2c_gpio_gauge_devs[] __initdata = {
+	{
+		I2C_BOARD_INFO("max17042", 0x36),
+		.platform_data = &i9100_max17042_data,
+	},
+};
+
+static void __init i9100_init_battery_gauge(void)
+{
+	gpio_request(GPIO_FUEL_ALERT, "FUEL_ALERT");
+	s5p_register_gpio_interrupt(GPIO_FUEL_ALERT);
+	s3c_gpio_cfgpin(GPIO_FUEL_ALERT, S3C_GPIO_SFN(0xf));
+	i2c_gpio_gauge_devs[0].irq = gpio_to_irq(GPIO_FUEL_ALERT);
+	
+	i2c_register_board_info(I2C_GPIO_BUS_GAUGE,
+		i2c_gpio_gauge_devs, ARRAY_SIZE(i2c_gpio_gauge_devs));
 }
 /******************************************************************************
  * camera
@@ -1558,6 +1627,7 @@ static struct platform_device *i9100_devices[] __initdata = {
 	&i9100_device_gpio_keys,
 	&i2c_gpio_touchkey,
 	&i2c_gpio_usb,
+	&i2c_gpio_gauge,
 	&i2c_gpio_fm,
 };
 
@@ -1628,6 +1698,7 @@ static void __init i9100_machine_init(void) {
 	i9100_init_usb();
 	i9100_init_usb_switch();
 	clk_xusbxti.rate = 24000000;
+	i9100_init_battery_gauge();
 	i9100_init_fm();
 	i9100_init_camera();
 	
