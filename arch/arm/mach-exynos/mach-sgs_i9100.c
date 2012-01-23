@@ -178,8 +178,8 @@ static struct regulator_consumer_supply ldo16_supply[] = {
 	REGULATOR_SUPPLY("cam_sensor_io", NULL),
 };
 
-static struct regulator_consumer_supply ldo17_supply[] = {
-	REGULATOR_SUPPLY("vt_cam_core_1.8v", NULL),
+static struct regulator_consumer_supply ldo17_rev04_supply[] = {
+	REGULATOR_SUPPLY("vmmc", "s3c-sdhci.2"),
 };
 
 static struct regulator_consumer_supply ldo18_supply[] = {
@@ -260,7 +260,7 @@ VREG(ldo13, "VCC_3.0V_LCD", 3000000, 3000000, 1,  REGULATOR_CHANGE_STATUS);
 VREG(ldo14, "VCC_2.8V_MOTOR", 2800000, 2800000, 0,  REGULATOR_CHANGE_STATUS);
 VREG(ldo15, "LED_A_2.8V", 2800000, 2800000, 1,  REGULATOR_CHANGE_STATUS);
 VREG(ldo16, "CAM_SENSOR_IO_1.8V", 1800000, 1800000, 0, REGULATOR_CHANGE_STATUS);
-VREG(ldo17, "VT_CAM_CORE_1.8V", 1800000, 1800000, 0, REGULATOR_CHANGE_STATUS);
+VREG(ldo17_rev04, "VTF_2.8V", 2800000, 2800000, 0, REGULATOR_CHANGE_STATUS);
 VREG(ldo18, "TOUCH_LED_3.3V", 3000000, 3300000, 0,
 	REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_VOLTAGE);
 VREG(ldo21, "VDDQ_M1M2_1.2V", 1200000, 1200000, 1,  REGULATOR_CHANGE_STATUS);
@@ -435,7 +435,7 @@ static struct max8997_regulator_data __initdata i9100_max8997_regulators[] = {
 	{ MAX8997_LDO14, &ldo14_init_data },
 	{ MAX8997_LDO15, &ldo15_init_data },
 	{ MAX8997_LDO16, &ldo16_init_data },
-	{ MAX8997_LDO17, &ldo17_init_data },
+	{ MAX8997_LDO17, &ldo17_rev04_init_data },
 	{ MAX8997_LDO18, &ldo18_init_data },
 	{ MAX8997_LDO21, &ldo21_init_data },
 	{ MAX8997_BUCK1, &buck1_init_data },
