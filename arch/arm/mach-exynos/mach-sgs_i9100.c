@@ -70,6 +70,9 @@ enum i2c_bus_ids {
 	I2C_GPIO_BUS_FM,
 };
 
+static struct max8997_muic_platform_data i9100_max8997_muic_pdata;
+static struct max8997_led_platform_data i9100_max8997_led_pdata;
+
 /******************************************************************************
  * UART 
  ********************************************************************************/
@@ -489,6 +492,9 @@ static struct max8997_platform_data __initdata i9100_max8997_pdata = {
 	.buck5_voltage[5]	= 1200000,
 	.buck5_voltage[6]	= 1200000,
 	.buck5_voltage[7]	= 1200000,
+
+	.muic_pdata = &i9100_max8997_muic_pdata,
+	.led_pdata = &i9100_max8997_led_pdata,
 };
 
 static struct i2c_board_info i2c5_devs[] __initdata = {
@@ -498,6 +504,9 @@ static struct i2c_board_info i2c5_devs[] __initdata = {
 	},
 };
 
+/******************************************************************************
+ * EMMC voltage regulator
+ ******************************************************************************/
 static struct regulator_consumer_supply emmc_supplies[] = {
 	REGULATOR_SUPPLY("vmmc", "s3c-sdhci.0"),
 	REGULATOR_SUPPLY("vmmc", "dw_mmc"),
@@ -526,6 +535,55 @@ static struct platform_device emmc_fixed_voltage = {
 	.dev			= {
 		.platform_data	= &emmc_fixed_voltage_config,
 	},
+};
+
+/******************************************************************************
+ * max8997 devices
+ ******************************************************************************/
+static void i9100_muic_uart_callback(bool attached) {
+	//gpio_set_value(GPIO_UART_SEL, !path);
+}
+
+static void i9100_muic_mhl_callback(bool attached) {
+}
+
+static void i9100_muic_cardock_callback(bool attached) {
+}
+
+static void i9100_muic_deskdock_callback(bool attached) {
+}
+
+static void i9100_muic_usb_callback(enum max8997_muic_usb_type type,
+	bool attached)
+{
+	printk("%s: type=%s, state %d\n", __func__, type == MAX8997_USB_HOST ? 
+		"HOST" : "DEVICE", attached);
+}
+
+static void i9100_muic_chg_callback(bool attached,
+	enum max8997_muic_charger_type type)
+{
+	printk("%s: type %d, attached %d\n", __func__, type, attached);
+}
+
+static struct max8997_muic_platform_data i9100_max8997_muic_pdata = {
+	.usb_callback = i9100_muic_usb_callback,
+	.charger_callback = i9100_muic_chg_callback,
+	.deskdock_callback = i9100_muic_deskdock_callback,
+	.cardock_callback = i9100_muic_cardock_callback,
+	.mhl_callback = i9100_muic_mhl_callback,
+	.uart_callback = i9100_muic_uart_callback,
+};
+
+static struct max8997_led_platform_data i9100_max8997_led_pdata = {
+	.mode = {
+		MAX8997_FLASH_MODE,
+		MAX8997_MOVIE_MODE,
+	},
+	.brightness = {
+		0,
+		0,
+	}
 };
 
 /******************************************************************************
