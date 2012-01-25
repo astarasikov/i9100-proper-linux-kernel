@@ -27,6 +27,7 @@
 #include <linux/platform_data/fsa9480.h>
 
 #include <media/s5p_fimc.h>
+#include <media/m5mols.h>
 #include <media/v4l2-mediabus.h>
 
 #include <asm/mach/arch.h>
@@ -59,6 +60,9 @@
 
 enum fixed_regulator_id {
 	FIXED_REG_ID_MMC = 0,
+	FIXED_REG_ID_CAM_A28V,
+	FIXED_REG_ID_CAM_12V,
+	FIXED_REG_ID_CAM_28V,
 };
 
 enum i2c_bus_ids {
@@ -69,6 +73,8 @@ enum i2c_bus_ids {
 	I2C_GPIO_BUS_MHL,
 	I2C_GPIO_BUS_FM,
 };
+
+#define M5MO_VREG_CONSUMER "0-001f"
 
 static struct max8997_muic_platform_data i9100_max8997_muic_pdata;
 static struct max8997_led_platform_data i9100_max8997_led_pdata;
@@ -143,7 +149,7 @@ static struct regulator_consumer_supply ldo5_supply[] = {
 };
 
 static struct regulator_consumer_supply ldo7_supply[] = {
-	REGULATOR_SUPPLY("cam_isp", NULL),
+	REGULATOR_SUPPLY("dig_18", M5MO_VREG_CONSUMER),
 };
 
 static struct regulator_consumer_supply ldo8_supply[] = {
@@ -179,7 +185,7 @@ static struct regulator_consumer_supply ldo15_supply[] = {
 };
 
 static struct regulator_consumer_supply ldo16_supply[] = {
-	REGULATOR_SUPPLY("cam_sensor_io", NULL),
+	REGULATOR_SUPPLY("d_sensor", M5MO_VREG_CONSUMER),
 };
 
 static struct regulator_consumer_supply ldo17_rev04_supply[] = {
@@ -207,7 +213,7 @@ static struct regulator_consumer_supply buck3_supply[] = {
 };
 
 static struct regulator_consumer_supply buck4_supply[] = {
-	REGULATOR_SUPPLY("cam_isp_core", NULL),
+	REGULATOR_SUPPLY("core", M5MO_VREG_CONSUMER),
 };
 
 static struct regulator_consumer_supply buck7_supply[] = {
@@ -1601,16 +1607,102 @@ static void __init i9100_init_battery_gauge(void)
 /******************************************************************************
  * camera
  ******************************************************************************/
-static struct s5p_platform_mipi_csis mipi_csis_platdata = {
-	.clk_rate	= 166000000UL,
-	.lanes		= 2,
-	.alignment	= 32,
-	.hs_settle	= 12,
-	.phy_enable	= s5p_csis_phy_enable,
+static struct regulator_consumer_supply cam_vdda_supply[] = {
+	REGULATOR_SUPPLY("a_sensor", M5MO_VREG_CONSUMER),
+};
+
+static struct regulator_init_data cam_vdda_reg_init_data = {
+	.constraints = {
+		.valid_ops_mask = REGULATOR_CHANGE_STATUS
+	},
+	.num_consumer_supplies = ARRAY_SIZE(cam_vdda_supply),
+	.consumer_supplies = cam_vdda_supply,
+};
+
+static struct fixed_voltage_config cam_vdda_fixed_voltage_cfg = {
+	.supply_name	= "CAM_IO_EN",
+	.microvolts	= 2800000,
+	.gpio		= GPIO_CAM_IO_EN,
+	.enable_high	= 1,
+	.init_data	= &cam_vdda_reg_init_data,
+};
+
+static struct platform_device cam_vdda_fixed_rdev = {
+	.name = "reg-fixed-voltage",
+	.id = FIXED_REG_ID_CAM_A28V,
+	.dev = {
+		.platform_data	= &cam_vdda_fixed_voltage_cfg
+	},
+};
+
+static struct regulator_consumer_supply camera_8m_12v_supply =
+	REGULATOR_SUPPLY("dig_12", M5MO_VREG_CONSUMER);
+
+static struct regulator_init_data cam_8m_12v_reg_init_data = {
+	.num_consumer_supplies	= 1,
+	.consumer_supplies	= &camera_8m_12v_supply,
+	.constraints = {
+		.valid_ops_mask = REGULATOR_CHANGE_STATUS
+	},
+};
+
+static struct fixed_voltage_config cam_8m_12v_fixed_voltage_cfg = {
+	.supply_name	= "8M_1.2V",
+	.microvolts	= 1200000,
+	.gpio		= GPIO_CAM_SENSOR_CORE,
+	.enable_high	= 1,
+	.init_data	= &cam_8m_12v_reg_init_data,
+};
+
+static struct platform_device cam_8m_12v_fixed_rdev = {
+	.name = "reg-fixed-voltage",
+	.id = FIXED_REG_ID_CAM_12V,
+	.dev = {
+		.platform_data = &cam_8m_12v_fixed_voltage_cfg
+	},
+};
+
+static struct regulator_consumer_supply camera_8m_28v_supply =
+	REGULATOR_SUPPLY("dig_28", M5MO_VREG_CONSUMER);
+
+static struct regulator_init_data cam_8m_28v_reg_init_data = {
+	.num_consumer_supplies	= 1,
+	.consumer_supplies	= &camera_8m_28v_supply,
+	.constraints = {
+		.valid_ops_mask = REGULATOR_CHANGE_STATUS
+	},
+};
+
+static struct fixed_voltage_config cam_8m_28v_fixed_voltage_cfg = {
+	.supply_name	= "8M_2.8V",
+	.microvolts	= 2800000,
+	.gpio		= GPIO_8M_AF_EN,
+	.enable_high	= 1,
+	.init_data	= &cam_8m_28v_reg_init_data,
+};
+
+static struct platform_device cam_8m_28v_fixed_rdev = {
+	.name = "reg-fixed-voltage",
+	.id = FIXED_REG_ID_CAM_28V,
+	.dev = {
+		.platform_data = &cam_8m_28v_fixed_voltage_cfg
+	},
+};
+
+static int m5mols_set_power(struct device *dev, int on)
+{
+	gpio_set_value(GPIO_VT_CAM_15V, !!on);
+	return 0;
+}
+
+static struct m5mols_platform_data m5mols_platdata = {
+	.gpio_reset	= GPIO_ISP_RESET,
+	.set_power	= m5mols_set_power,
 };
 
 static struct i2c_board_info m5mols_board_info = {
 	I2C_BOARD_INFO("M5MOLS", 0x1F),
+	.platform_data = &m5mols_platdata,
 };
 
 static struct s5p_fimc_isp_info i9100_camera_sensors[] = {
@@ -1625,21 +1717,60 @@ static struct s5p_fimc_isp_info i9100_camera_sensors[] = {
 };
 
 static struct s5p_platform_fimc fimc_md_platdata = {
-//	.isp_info	= i9100_camera_sensors,
-//	.num_clients	= ARRAY_SIZE(i9100_camera_sensors),
+	.isp_info	= i9100_camera_sensors,
+	.num_clients	= ARRAY_SIZE(i9100_camera_sensors),
 };
 
-static void i9100_init_camera(void) {
+static struct s5p_platform_mipi_csis mipi_csis_platdata = {
+	.clk_rate	= 166000000UL,
+	.lanes		= 2,
+	.alignment	= 32,
+	.hs_settle	= 12,
+	.phy_enable	= s5p_csis_phy_enable,
+};
+
+static struct gpio i9100_cam_gpios[] = {
+	{
+		.gpio = GPIO_CAM_8M_ISP_INT,
+		.flags = GPIOF_IN,
+		.label = "8M_ISP_INT"
+	},
+	{
+		.gpio = GPIO_VT_CAM_15V,
+		.flags = GPIOF_OUT_INIT_LOW,
+		.label = "CAM_VT_1.5V",
+	},
+};
+
+static void __init i9100_init_camera(void) {
 	s3c_set_platdata(&mipi_csis_platdata, sizeof(mipi_csis_platdata),
-			 &s5p_device_mipi_csis0);
+			&s5p_device_mipi_csis0);
 	s3c_set_platdata(&fimc_md_platdata,  sizeof(fimc_md_platdata),
-			 &s5p_device_fimc_md);
+			&s5p_device_fimc_md);
 	
+	if (gpio_request_array(i9100_cam_gpios, ARRAY_SIZE(i9100_cam_gpios))) {
+		pr_err("%s: failed to request GPIO\n", __func__);
+		return;
+	}
+
+	if (!s3c_gpio_cfgpin(GPIO_CAM_8M_ISP_INT, S3C_GPIO_SFN(0xf))) {
+		s5p_register_gpio_interrupt(GPIO_CAM_8M_ISP_INT);
+		m5mols_board_info.irq = gpio_to_irq(GPIO_CAM_8M_ISP_INT);
+	}
+	else {
+		pr_err("Failed to configure 8M_ISP_INT GPIO\n");
+	}
+
 	if (exynos4_fimc_setup_gpio(S5P_CAMPORT_A)) {
 		pr_err("%s: Camera port A setup failed\n", __func__);
 		return;
 	}
  }
+
+static struct s3c2410_platform_i2c i9100_i2c0_platdata __initdata = {
+	.frequency	= 400000U,
+	.sda_delay	= 200,
+};
 
 /******************************************************************************
  * platform devices
@@ -1659,10 +1790,10 @@ static struct platform_device *i9100_devices[] __initdata = {
 	&s3c_device_hsmmc2,
 	&s3c_device_hsmmc3,
 	&s5p_device_mipi_csis0,
-	//&s5p_device_fimc0,
-	//&s5p_device_fimc1,
-	//&s5p_device_fimc2,
-	//&s5p_device_fimc3,
+	&s5p_device_fimc0,
+	&s5p_device_fimc1,
+	&s5p_device_fimc2,
+	&s5p_device_fimc3,
 	&s5p_device_fimd0,
 	&s5p_device_g2d,
 	&s5p_device_mfc,
@@ -1688,6 +1819,10 @@ static struct platform_device *i9100_devices[] __initdata = {
 	&i2c_gpio_usb,
 	&i2c_gpio_gauge,
 	&i2c_gpio_fm,
+
+	&cam_vdda_fixed_rdev,
+	&cam_8m_12v_fixed_rdev,
+	&cam_8m_28v_fixed_rdev,
 };
 
 static void __init i9100_pmic_init(void) {
@@ -1744,6 +1879,8 @@ static void __init i9100_machine_init(void) {
 	s3c_sdhci2_set_platdata(&i9100_hsmmc2_pdata);
 	s3c_sdhci3_set_platdata(&i9100_hsmmc3_pdata);
 	
+	s3c_i2c0_set_platdata(&i9100_i2c0_platdata);
+	
 	i9100_init_tsp();
 	s3c_i2c3_set_platdata(&i2c3_data);
 	i2c_register_board_info(3, i2c3_devs, ARRAY_SIZE(i2c3_devs));
@@ -1765,6 +1902,7 @@ static void __init i9100_machine_init(void) {
 
 	s5p_device_mfc.dev.parent = &exynos4_device_pd[PD_MFC].dev;
 	s5p_device_fimd0.dev.parent = &exynos4_device_pd[PD_LCD0].dev;
+
 	s5p_device_fimc0.dev.parent = &exynos4_device_pd[PD_CAM].dev;
 	s5p_device_fimc1.dev.parent = &exynos4_device_pd[PD_CAM].dev;
 	s5p_device_fimc2.dev.parent = &exynos4_device_pd[PD_CAM].dev;
