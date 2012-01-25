@@ -1438,10 +1438,10 @@ static int i9100_set_usb_mipi(bool enable)
 		 * USB 3.3V -> MIPI 18V -> HSIC 1.2V -> MIPI 1.1V
 		 */
 		pr_info("%s: disable LDOs\n", __func__);
-		regulator_force_disable(usb33_regulator);
-		regulator_force_disable(mipi18_regulator);
-		regulator_force_disable(hsic12_regulator);
-		regulator_force_disable(mipi11_regulator);
+		regulator_disable(usb33_regulator);
+		regulator_disable(mipi18_regulator);
+		regulator_disable(hsic12_regulator);
+		regulator_disable(mipi11_regulator);
 	}
 
 	regulator_put(usb33_regulator);
@@ -1808,6 +1808,9 @@ static struct platform_device *i9100_devices[] __initdata = {
 	&exynos4_device_pd[PD_TV],
 	&s5p_device_fimc_md,
 	&exynos4_device_tmu,
+	
+	&s3c_device_wdt,
+	&s3c_device_timer[0],
 
 	&lcd_spi_gpio,
 	&s3c_device_usbgadget,
