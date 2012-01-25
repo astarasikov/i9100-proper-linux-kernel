@@ -764,7 +764,7 @@ static void i9100_fimd0_gpio_setup(void)
 	 */
 	reg = __raw_readl(S3C_VA_SYS + 0x0210);
 	reg &= (1 << 1);
-	reg |= 1;
+	reg |= 3;
 	reg &= ~(1 << 13);
 	reg &= ~(3 << 10);
 	reg &= ~(1 << 12);
