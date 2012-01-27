@@ -1386,24 +1386,15 @@ fail_safeout2:
 
 static int i9100_set_usb_mipi(bool enable)
 {
-	struct regulator *mipi11_regulator;
 	struct regulator *mipi18_regulator;
 	struct regulator *hsic12_regulator;
-	struct regulator *usb33_regulator;
 	int ret = 0;
-
-	mipi11_regulator = regulator_get(NULL, "vdd11");
-	if (IS_ERR(mipi11_regulator)) {
-		pr_err("%s: failed to get %s\n", __func__, "vdd11");
-		ret = -ENODEV;
-		goto out4;
-	}
 
 	mipi18_regulator = regulator_get(NULL, "vdd18");
 	if (IS_ERR(mipi18_regulator)) {
 		pr_err("%s: failed to get %s\n", __func__, "vdd18");
 		ret = -ENODEV;
-		goto out3;
+		goto out1;
 	}
 
 	hsic12_regulator = regulator_get(NULL, "vhsic");
@@ -1413,45 +1404,20 @@ static int i9100_set_usb_mipi(bool enable)
 		goto out2;
 	}
 
-	usb33_regulator = regulator_get(NULL, "vusb_3.3v");
-	if (IS_ERR(usb33_regulator)) {
-		pr_err("%s: failed to get %s\n", __func__, "vusb_3.3v");
-		ret = -ENODEV;
-		goto out1;
-	}
-
 	if (enable) {
-		/* Power On Sequence
-		 * MIPI 1.1V -> HSIC 1.2V -> MIPI 1.8V -> USB 3.3V
-		 */
-		pr_info("%s: enable LDOs\n", __func__);
-		if (!regulator_is_enabled(mipi11_regulator))
-			regulator_enable(mipi11_regulator);
 		if (!regulator_is_enabled(hsic12_regulator))
 			regulator_enable(hsic12_regulator);
 		if (!regulator_is_enabled(mipi18_regulator))
 			regulator_enable(mipi18_regulator);
-		if (!regulator_is_enabled(usb33_regulator))
-			regulator_enable(usb33_regulator);
 	} else {
-		/* Power Off Sequence
-		 * USB 3.3V -> MIPI 18V -> HSIC 1.2V -> MIPI 1.1V
-		 */
-		pr_info("%s: disable LDOs\n", __func__);
-		regulator_disable(usb33_regulator);
 		regulator_disable(mipi18_regulator);
 		regulator_disable(hsic12_regulator);
-		regulator_disable(mipi11_regulator);
 	}
 
-	regulator_put(usb33_regulator);
-out1:
 	regulator_put(hsic12_regulator);
 out2:
 	regulator_put(mipi18_regulator);
-out3:
-	regulator_put(mipi11_regulator);
-out4:
+out1:
 	return ret;
 }
 
