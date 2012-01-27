@@ -22,6 +22,7 @@
 #include <linux/mfd/max8997.h>
 #include <linux/lcd.h>
 #include <linux/power/max17042_battery.h>
+#include <linux/rfkill-gpio.h>
 #include <linux/spi/spi.h>
 #include <linux/spi/spi_gpio.h>
 #include <linux/platform_data/fsa9480.h>
@@ -1737,13 +1738,58 @@ static struct s3c2410_platform_i2c i9100_i2c0_platdata __initdata = {
 };
 
 /******************************************************************************
- * platform devices
+ * Bluetooth
  ******************************************************************************/
-/* DEVFREQ controlling memory/bus */
+static void __init i9100_init_bt(void) {
+	gpio_request(EXYNOS4_GPA0(0), "BT_RXD");
+	gpio_request(EXYNOS4_GPA0(1), "BT_TXD");
+	gpio_request(EXYNOS4_GPA0(2), "BT_CTS");
+	gpio_request(EXYNOS4_GPA0(3), "BT_RTS");
+	s3c_gpio_cfgrange_nopull(EXYNOS4_GPA0(0), 4, S3C_GPIO_SFN(2));
+}
+
+/******************************************************************************
+ * GPS rfkill
+ ******************************************************************************/
+struct rfkill_gpio_platform_data i9100_gps_pdata = {
+	.reset_gpio	= GPIO_GPS_nRST,
+	.shutdown_gpio	= GPIO_GPS_PWR_EN,
+	.type		= RFKILL_TYPE_GPS,
+	.name		= "bcm4751-gps",
+};
+
+static struct platform_device i9100_device_gps = {
+	.name		= "rfkill_gpio",
+	.id		= -1,
+	.dev		= {
+		.platform_data	= &i9100_gps_pdata,
+	},
+};
+
+static void __init i9100_init_gps(void) {
+	gpio_request(EXYNOS4_GPA0(4), "GPS_RXD");
+	gpio_request(EXYNOS4_GPA0(5), "GPS_TXD");
+	gpio_request(EXYNOS4_GPA0(6), "GPS_CTS");
+	gpio_request(EXYNOS4_GPA0(7), "GPS_RTS");
+	s3c_gpio_cfgrange_nopull(EXYNOS4_GPA0(4), 4, S3C_GPIO_SFN(2));
+	
+	s3c_gpio_cfgpin(GPIO_GPS_PWR_EN, S3C_GPIO_OUTPUT);
+	s3c_gpio_setpull(GPIO_GPS_PWR_EN, S3C_GPIO_PULL_NONE);
+	
+	s3c_gpio_cfgpin(GPIO_GPS_nRST, S3C_GPIO_OUTPUT);
+	s3c_gpio_setpull(GPIO_GPS_nRST, S3C_GPIO_PULL_NONE);
+}
+
+/******************************************************************************
+ * DEVFREQ controlling memory/bus
+ ******************************************************************************/
 static struct platform_device exynos4_bus_devfreq = {
 	.name			= "exynos4210-busfreq",
 };
 
+/******************************************************************************
+ * platform devices
+ ******************************************************************************/
 static struct platform_device *i9100_devices[] __initdata = {
 	&s3c_device_i2c5,
 	&s3c_device_i2c0,
@@ -1753,16 +1799,25 @@ static struct platform_device *i9100_devices[] __initdata = {
 	&s3c_device_hsmmc0,
 	&s3c_device_hsmmc2,
 	&s3c_device_hsmmc3,
-	&s5p_device_mipi_csis0,
+	&s3c_device_timer[0],
+	&s3c_device_usbgadget,
+	&s3c_device_wdt,
+	&s5p_device_ehci,
 	&s5p_device_fimc0,
 	&s5p_device_fimc1,
 	&s5p_device_fimc2,
 	&s5p_device_fimc3,
+	&s5p_device_fimc_md,
 	&s5p_device_fimd0,
+	&s5p_device_mipi_csis0,
 	&s5p_device_g2d,
 	&s5p_device_mfc,
 	&s5p_device_mfc_l,
 	&s5p_device_mfc_r,
+	&samsung_asoc_dma,
+	&exynos4_bus_devfreq,
+	&exynos4_device_i2s0,
+	&exynos4_device_ohci,
 	&exynos4_device_pd[PD_MFC],
 	&exynos4_device_pd[PD_G3D],
 	&exynos4_device_pd[PD_LCD0],
@@ -1770,18 +1825,9 @@ static struct platform_device *i9100_devices[] __initdata = {
 	&exynos4_device_pd[PD_CAM],
 	&exynos4_device_pd[PD_GPS],
 	&exynos4_device_pd[PD_TV],
-	&s5p_device_fimc_md,
 	&exynos4_device_tmu,
 	
-	&s3c_device_wdt,
-	&s3c_device_timer[0],
-
 	&lcd_spi_gpio,
-	&s3c_device_usbgadget,
-	&s5p_device_ehci,
-	&exynos4_device_ohci,
-	&exynos4_bus_devfreq,
-	&i9100_device_gpio_keys,
 	&i2c_gpio_touchkey,
 	&i2c_gpio_usb,
 	&i2c_gpio_gauge,
@@ -1790,6 +1836,9 @@ static struct platform_device *i9100_devices[] __initdata = {
 	&cam_vdda_fixed_rdev,
 	&cam_8m_12v_fixed_rdev,
 	&cam_8m_28v_fixed_rdev,
+	
+	&i9100_device_gpio_keys,
+	&i9100_device_gps,
 };
 
 static void __init i9100_pmic_init(void) {
@@ -1864,6 +1913,8 @@ static void __init i9100_machine_init(void) {
 	i9100_init_battery_gauge();
 	i9100_init_fm();
 	i9100_init_camera();
+	i9100_init_bt();
+	i9100_init_gps();
 	
 	platform_add_devices(i9100_devices, ARRAY_SIZE(i9100_devices));
 
