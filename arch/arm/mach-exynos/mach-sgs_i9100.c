@@ -78,6 +78,7 @@ enum i2c_bus_ids {
 
 static struct max8997_muic_platform_data i9100_max8997_muic_pdata;
 static struct max8997_led_platform_data i9100_max8997_led_pdata;
+static void i9100_set_usb_path(bool to_ap);
 
 /******************************************************************************
  * UART 
@@ -562,8 +563,7 @@ static void i9100_muic_deskdock_callback(bool attached) {
 static void i9100_muic_usb_callback(enum max8997_muic_usb_type type,
 	bool attached)
 {
-	printk("%s: type=%s, state %d\n", __func__, type == MAX8997_USB_HOST ? 
-		"HOST" : "DEVICE", attached);
+	i9100_set_usb_path(attached);
 }
 
 static void i9100_muic_chg_callback(bool attached,
@@ -1879,7 +1879,6 @@ static void __init i9100_machine_init(void) {
 	s5p_device_mipi_csis0.dev.parent = &exynos4_device_pd[PD_CAM].dev;
 
 	i9100_set_usb_mipi(1);
-	i9100_set_usb_path(1);
 }
 
 MACHINE_START(SGS_I9100, "i9100")
