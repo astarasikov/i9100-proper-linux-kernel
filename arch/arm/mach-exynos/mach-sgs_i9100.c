@@ -870,13 +870,10 @@ static int ld9040_power(struct lcd_device *ld, int enable) {
 	
 	if (enable) {
 		regulator_enable(regulator);
-		regulator_put(regulator);
 	} else {
-		if (regulator_is_enabled(regulator)) {
-			regulator_force_disable(regulator);
-		}
+		regulator_disable(regulator);
 	}
-
+	
 	regulator_put(regulator);
 fail:
 	return rc;
@@ -909,6 +906,7 @@ static struct platform_device lcd_spi_gpio = {
 
 static struct spi_board_info spi_board_info[] __initdata = {
 	{
+		.modalias = "ld9040",
 		.max_speed_hz	= 1200000,
 		.bus_num	= I9100_SPI_LCD_BUS,
 		.chip_select	= 0,
