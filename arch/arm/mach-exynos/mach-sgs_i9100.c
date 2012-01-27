@@ -547,7 +547,7 @@ static struct platform_device emmc_fixed_voltage = {
  * max8997 devices
  ******************************************************************************/
 static void i9100_muic_uart_callback(bool attached) {
-	//gpio_set_value(GPIO_UART_SEL, !path);
+	gpio_set_value(GPIO_UART_SEL, !attached);
 }
 
 static void i9100_muic_mhl_callback(bool attached) {
