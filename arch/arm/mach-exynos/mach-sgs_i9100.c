@@ -75,6 +75,11 @@ enum i2c_bus_ids {
 	I2C_GPIO_BUS_FM,
 };
 
+enum sgs2_rfk_id {
+	RFK_ID_BT,
+	RFK_ID_GPS,
+};
+
 #define M5MO_VREG_CONSUMER "0-001f"
 
 static struct max8997_muic_platform_data i9100_max8997_muic_pdata;
@@ -1740,12 +1745,32 @@ static struct s3c2410_platform_i2c i9100_i2c0_platdata __initdata = {
 /******************************************************************************
  * Bluetooth
  ******************************************************************************/
+struct rfkill_gpio_platform_data i9100_bt_pdata = {
+	.reset_gpio	= GPIO_BT_nRST,
+	.shutdown_gpio	= GPIO_BT_EN,
+	.type		= RFKILL_TYPE_BLUETOOTH,
+	.name		= "bcm4330-bt",
+};
+
+static struct platform_device i9100_device_bt = {
+	.name = "rfkill_gpio",
+	.id = RFK_ID_BT,
+	.dev = {
+		.platform_data	= &i9100_bt_pdata,
+	},
+};
 static void __init i9100_init_bt(void) {
 	gpio_request(EXYNOS4_GPA0(0), "BT_RXD");
 	gpio_request(EXYNOS4_GPA0(1), "BT_TXD");
 	gpio_request(EXYNOS4_GPA0(2), "BT_CTS");
 	gpio_request(EXYNOS4_GPA0(3), "BT_RTS");
 	s3c_gpio_cfgrange_nopull(EXYNOS4_GPA0(0), 4, S3C_GPIO_SFN(2));
+	
+	s3c_gpio_cfgpin(GPIO_BT_EN, S3C_GPIO_OUTPUT);
+	s3c_gpio_setpull(GPIO_BT_EN, S3C_GPIO_PULL_NONE);
+	
+	s3c_gpio_cfgpin(GPIO_BT_nRST, S3C_GPIO_OUTPUT);
+	s3c_gpio_setpull(GPIO_BT_nRST, S3C_GPIO_PULL_NONE);
 }
 
 /******************************************************************************
@@ -1759,9 +1784,9 @@ struct rfkill_gpio_platform_data i9100_gps_pdata = {
 };
 
 static struct platform_device i9100_device_gps = {
-	.name		= "rfkill_gpio",
-	.id		= -1,
-	.dev		= {
+	.name = "rfkill_gpio",
+	.id = RFK_ID_GPS,
+	.dev = {
 		.platform_data	= &i9100_gps_pdata,
 	},
 };
@@ -1839,6 +1864,7 @@ static struct platform_device *i9100_devices[] __initdata = {
 	
 	&i9100_device_gpio_keys,
 	&i9100_device_gps,
+	&i9100_device_bt,
 };
 
 static void __init i9100_pmic_init(void) {
