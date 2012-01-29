@@ -554,7 +554,7 @@ static struct platform_device emmc_fixed_voltage = {
  * max8997 devices
  ******************************************************************************/
 static void i9100_muic_uart_callback(bool attached) {
-	gpio_set_value(GPIO_UART_SEL, !attached);
+	gpio_direction_output(GPIO_UART_SEL, !attached);
 }
 
 static void i9100_muic_mhl_callback(bool attached) {
@@ -748,7 +748,7 @@ static void __init i9100_init_tsp(void) {
 	gpio_request(GPIO_TSP_LDO_ON, "TOUCH_LDO");
 	s3c_gpio_cfgpin(GPIO_TSP_LDO_ON, S3C_GPIO_OUTPUT);
 	s3c_gpio_setpull(GPIO_TSP_LDO_ON, S3C_GPIO_PULL_NONE);
-	gpio_set_value(GPIO_TSP_LDO_ON, 1);
+	gpio_direction_output(GPIO_TSP_LDO_ON, 1);
 }
 
 /******************************************************************************
@@ -1343,7 +1343,7 @@ static void i9100_config_gpio_table(void)
 		s3c_gpio_setpull(gpio, i9100_init_gpios[i].pull);
 
 		if (i9100_init_gpios[i].val != SGS_GPIO_SETPIN_NONE)
-			gpio_set_value(gpio, i9100_init_gpios[i].val);
+			gpio_direction_output(gpio, i9100_init_gpios[i].val);
 
 		s5p_gpio_set_drvstr(gpio, i9100_init_gpios[i].drv);
 	}
@@ -1432,7 +1432,8 @@ static struct s5p_otg_platdata i9100_otg_pdata;
 static void __init i9100_init_usb(void) {
 	gpio_request(GPIO_USB_SEL, "USB Route");
 	s3c_gpio_cfgpin(GPIO_USB_SEL, S3C_GPIO_OUTPUT);
-	gpio_set_value(GPIO_USB_SEL, 0);
+	s3c_gpio_setpull(GPIO_USB_SEL, S3C_GPIO_PULL_NONE);
+	gpio_direction_output(GPIO_USB_SEL, 0);
 	
 	s5p_ehci_set_platdata(&i9100_ehci_pdata);
 	exynos4_ohci_set_platdata(&i9100_ohci_pdata);
@@ -1469,9 +1470,10 @@ static void __init i9100_init_fm(void)
 	
 	gpio_request(GPIO_FM_RST, "FM Reset");
 	s3c_gpio_cfgpin(GPIO_FM_RST, S3C_GPIO_OUTPUT);
-	gpio_set_value(GPIO_FM_RST, 0);
+	s3c_gpio_setpull(GPIO_FM_RST, S3C_GPIO_PULL_NONE);
+	gpio_direction_output(GPIO_FM_RST, 0);
 	msleep(1);
-	gpio_set_value(GPIO_FM_RST, 1);
+	gpio_direction_output(GPIO_FM_RST, 1);
 	msleep(2);
 
 	i2c_register_board_info(I2C_GPIO_BUS_FM,
@@ -1915,7 +1917,7 @@ static void __init i9100_machine_init(void) {
 
 	//XXX: use rfkill with callback or fix s3d-sdhci
 	s3c_gpio_cfgpin(GPIO_WLAN_EN, S3C_GPIO_OUTPUT);
-	gpio_set_value(GPIO_WLAN_EN, 1);
+	gpio_direction_output(GPIO_WLAN_EN, 1);
 	
 	s3c_sdhci0_set_platdata(&i9100_hsmmc0_pdata);
 	s3c_sdhci2_set_platdata(&i9100_hsmmc2_pdata);
