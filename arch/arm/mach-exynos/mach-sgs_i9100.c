@@ -569,7 +569,7 @@ static void i9100_muic_deskdock_callback(bool attached) {
 static void i9100_muic_usb_callback(enum max8997_muic_usb_type type,
 	bool attached)
 {
-	i9100_set_usb_path(attached);
+	//i9100_set_usb_path(attached);
 }
 
 static void i9100_muic_chg_callback(bool attached,
@@ -1956,6 +1956,7 @@ static void __init i9100_machine_init(void) {
 	s5p_device_mipi_csis0.dev.parent = &exynos4_device_pd[PD_CAM].dev;
 
 	i9100_set_usb_mipi(1);
+	i9100_set_usb_path(1);
 }
 
 MACHINE_START(SGS_I9100, "i9100")
