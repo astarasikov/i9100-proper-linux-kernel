@@ -1800,6 +1800,15 @@ static struct platform_device i9100_keyled = {
 };
 
 /******************************************************************************
+ * Sound
+ ******************************************************************************/
+static struct i2c_board_info i2c6_devs[] __initdata = {
+	{
+		I2C_BOARD_INFO("ymu823", 0x3a),
+	},
+};
+
+/******************************************************************************
  * DEVFREQ controlling memory/bus
  ******************************************************************************/
 static struct platform_device exynos4_bus_devfreq = {
@@ -1814,6 +1823,7 @@ static struct platform_device *i9100_devices[] __initdata = {
 	&s3c_device_i2c0,
 	&emmc_fixed_voltage,
 	&s3c_device_i2c3,
+	&s3c_device_i2c6,
 	&s3c_device_rtc,
 	&s3c_device_hsmmc0,
 	&s3c_device_hsmmc2,
@@ -1933,6 +1943,9 @@ static void __init i9100_machine_init(void) {
 	s3c_i2c5_set_platdata(NULL);
 	i2c5_devs[0].irq = gpio_to_irq(GPIO_PMIC_IRQ);
 	i2c_register_board_info(5, i2c5_devs, ARRAY_SIZE(i2c5_devs));
+
+	s3c_i2c6_set_platdata(NULL);
+	i2c_register_board_info(6, i2c6_devs, ARRAY_SIZE(i2c6_devs));
 	
 	i9100_init_fb();
 	i9100_init_touchkey();
