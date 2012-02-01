@@ -1903,6 +1903,13 @@ static void __init i9100_get_revision(void) {
 	printk(KERN_INFO "I9100 board revision %d\n", revision);
 }
 
+static int __init i9100_late_init(void) {
+	i9100_set_usb_mipi(1);
+	i9100_set_usb_path(1);
+	return 0;
+}
+device_initcall(i9100_late_init);
+
 static void __init i9100_machine_init(void) {
 	i9100_get_revision();
 	i9100_config_gpio_table();
@@ -1948,9 +1955,6 @@ static void __init i9100_machine_init(void) {
 	s5p_device_fimc2.dev.parent = &exynos4_device_pd[PD_CAM].dev;
 	s5p_device_fimc3.dev.parent = &exynos4_device_pd[PD_CAM].dev;
 	s5p_device_mipi_csis0.dev.parent = &exynos4_device_pd[PD_CAM].dev;
-
-	i9100_set_usb_mipi(1);
-	i9100_set_usb_path(1);
 }
 
 MACHINE_START(SGS_I9100, "i9100")
