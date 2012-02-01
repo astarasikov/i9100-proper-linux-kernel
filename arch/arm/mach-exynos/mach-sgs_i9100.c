@@ -810,50 +810,11 @@ static struct s3c_fb_platdata i9100_fb_pdata __initdata = {
 	.setup_gpio	= i9100_fimd0_gpio_setup,
 };
 
-static int ld9040_cfg_gpio(void)
-{
-	/* drive strength to max[4X] */
-	writel(0xffffffff, S5P_VA_GPIO + 0x18c);
-	writel(0xffffffff, S5P_VA_GPIO + 0x1ac);
-	writel(0xffffffff, S5P_VA_GPIO + 0x1cc);
-	writel(readl(S5P_VA_GPIO + 0x1ec) | 0xffffff, S5P_VA_GPIO + 0x1ec);
-
-	/* MLCD_RST */
-	s3c_gpio_cfgpin(EXYNOS4_GPY4(5), S3C_GPIO_OUTPUT);
-	s3c_gpio_setpull(EXYNOS4_GPY4(5), S3C_GPIO_PULL_NONE);
-
-	/* LCD_nCS */
-	s3c_gpio_cfgpin(EXYNOS4_GPY4(3), S3C_GPIO_OUTPUT);
-	s3c_gpio_setpull(EXYNOS4_GPY4(3), S3C_GPIO_PULL_NONE);
-	/* LCD_SCLK */
-	s3c_gpio_cfgpin(EXYNOS4_GPY3(1), S3C_GPIO_OUTPUT);
-	s3c_gpio_setpull(EXYNOS4_GPY3(1), S3C_GPIO_PULL_NONE);
-	/* LCD_SDI */
-	s3c_gpio_cfgpin(EXYNOS4_GPY3(3), S3C_GPIO_OUTPUT);
-	s3c_gpio_setpull(EXYNOS4_GPY3(3), S3C_GPIO_PULL_NONE);
-
-	return 0;
-}
-
 static int ld9040_reset(struct lcd_device *ld) {
-	int reset_gpio = -1;
-	int err;
-
-	reset_gpio = EXYNOS4_GPY4(5);
-
-	err = gpio_request(reset_gpio, "MLCD_RST");
-	if (err) {
-		printk(KERN_ERR "failed to request MLCD_RST for "
-				"lcd reset control\n");
-		return err;
-	}
-
+	gpio_direction_output(GPIO_LCD_RESET, 0);
 	mdelay(10);
-	gpio_direction_output(reset_gpio, 0);
+	gpio_direction_output(GPIO_LCD_RESET, 1);
 	mdelay(10);
-	gpio_direction_output(reset_gpio, 1);
-
-	gpio_free(reset_gpio);
 
 	return 0;
 }
@@ -922,7 +883,31 @@ static struct spi_board_info spi_board_info[] __initdata = {
 	}
 };
 
+static void __init ld9040_cfg_gpio(void)
+{
+	/* drive strength to max[4X] */
+	writel(0xffffffff, S5P_VA_GPIO + 0x18c);
+	writel(0xffffffff, S5P_VA_GPIO + 0x1ac);
+	writel(0xffffffff, S5P_VA_GPIO + 0x1cc);
+	writel(readl(S5P_VA_GPIO + 0x1ec) | 0xffffff, S5P_VA_GPIO + 0x1ec);
+
+	s3c_gpio_cfgpin(GPIO_LCD_RESET, S3C_GPIO_OUTPUT);
+	s3c_gpio_setpull(GPIO_LCD_RESET, S3C_GPIO_PULL_NONE);
+
+	s3c_gpio_cfgpin(GPIO_LCD_SPI_CS, S3C_GPIO_OUTPUT);
+	s3c_gpio_setpull(GPIO_LCD_SPI_CS, S3C_GPIO_PULL_NONE);
+	
+	s3c_gpio_cfgpin(GPIO_LCD_SPI_SCK, S3C_GPIO_OUTPUT);
+	s3c_gpio_setpull(GPIO_LCD_SPI_SCK, S3C_GPIO_PULL_NONE);
+	
+	s3c_gpio_cfgpin(GPIO_LCD_SPI_MOSI, S3C_GPIO_OUTPUT);
+	s3c_gpio_setpull(GPIO_LCD_SPI_MOSI, S3C_GPIO_PULL_NONE);
+}
+
 static void __init i9100_init_fb(void) {
+	if (gpio_request(GPIO_LCD_RESET, "LCD Reset")) {
+		pr_err("%s: failed to request LCD Reset gpio\n", __func__);
+	}
 	ld9040_cfg_gpio();
 	spi_register_board_info(spi_board_info, ARRAY_SIZE(spi_board_info));
 	s5p_fimd0_set_platdata(&i9100_fb_pdata);
