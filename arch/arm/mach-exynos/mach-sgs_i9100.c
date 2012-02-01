@@ -1353,20 +1353,12 @@ static void i9100_set_usb_path(bool to_ap) {
 	}
 
 	if (to_ap) {
-		if (!regulator_is_enabled(s1)) {
-			regulator_enable(s1);
-		}
-		if (regulator_is_enabled(s2)) {
-			regulator_force_disable(s2);
-		}
+		regulator_enable(s1);
+		regulator_disable(s2);
 	}
 	else {
-		if (regulator_is_enabled(s1)) {
-			regulator_force_disable(s1);
-		}
-		if (!regulator_is_enabled(s2)) {
-			regulator_enable(s2);
-		}
+		regulator_disable(s1);
+		regulator_enable(s2);
 	}
 
 	regulator_put(s2);
@@ -1395,10 +1387,8 @@ static int i9100_set_usb_mipi(bool enable)
 	}
 
 	if (enable) {
-		if (!regulator_is_enabled(hsic12_regulator))
-			regulator_enable(hsic12_regulator);
-		if (!regulator_is_enabled(mipi18_regulator))
-			regulator_enable(mipi18_regulator);
+		regulator_enable(hsic12_regulator);
+		regulator_enable(mipi18_regulator);
 	} else {
 		regulator_disable(mipi18_regulator);
 		regulator_disable(hsic12_regulator);
