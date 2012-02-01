@@ -1798,7 +1798,6 @@ static void __init i9100_init_gps(void) {
  ******************************************************************************/
 static struct led_regulator_platform_data i9100_keyled_data = {
 	.name = "i9100::keyled",
-	.brightness = LED_HALF,
 };
 
 static struct platform_device i9100_keyled = {
