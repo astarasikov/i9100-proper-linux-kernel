@@ -1329,7 +1329,7 @@ static void i9100_config_gpio_table(void)
 		s3c_gpio_setpull(gpio, i9100_init_gpios[i].pull);
 
 		if (i9100_init_gpios[i].val != SGS_GPIO_SETPIN_NONE)
-			gpio_direction_output(gpio, i9100_init_gpios[i].val);
+			gpio_set_value(gpio, i9100_init_gpios[i].val);
 
 		s5p_gpio_set_drvstr(gpio, i9100_init_gpios[i].drv);
 	}
