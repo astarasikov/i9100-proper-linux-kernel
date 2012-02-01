@@ -1547,6 +1547,7 @@ static void __init i9100_init_battery_gauge(void)
 	gpio_request(GPIO_FUEL_ALERT, "FUEL_ALERT");
 	s5p_register_gpio_interrupt(GPIO_FUEL_ALERT);
 	s3c_gpio_cfgpin(GPIO_FUEL_ALERT, S3C_GPIO_SFN(0xf));
+	s3c_gpio_setpull(GPIO_FUEL_ALERT, S3C_GPIO_PULL_UP);
 	i2c_gpio_gauge_devs[0].irq = gpio_to_irq(GPIO_FUEL_ALERT);
 	
 	i2c_register_board_info(I2C_GPIO_BUS_GAUGE,
