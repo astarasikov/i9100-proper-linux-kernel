@@ -672,8 +672,7 @@ static void i9100_mcs_power(bool on) {
 	if (on) {
 		regulator_enable(regulator);
 	} else {
-		if (regulator_is_enabled(regulator))
-			regulator_force_disable(regulator);
+		regulator_disable(regulator);
 	}
 
 	regulator_put(regulator);
@@ -703,6 +702,7 @@ static void __init i9100_init_touchkey(void)
 	gpio_request(GPIO_3_TOUCH_INT, "3_TOUCH_INT");
 	s5p_register_gpio_interrupt(GPIO_3_TOUCH_INT);
 	s3c_gpio_cfgpin(GPIO_3_TOUCH_INT, S3C_GPIO_SFN(0xf));
+	s3c_gpio_setpull(GPIO_3_TOUCH_INT, S3C_GPIO_PULL_UP);
 	i2c_gpio_touchkey_devs[0].irq = gpio_to_irq(GPIO_3_TOUCH_INT);
 
 	i2c_register_board_info(I2C_GPIO_BUS_TOUCHKEY,
