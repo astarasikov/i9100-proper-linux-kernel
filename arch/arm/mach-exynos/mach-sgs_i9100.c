@@ -19,6 +19,7 @@
 #include <linux/i2c/atmel_mxt_ts.h>
 #include <linux/regulator/machine.h>
 #include <linux/regulator/fixed.h>
+#include <linux/leds-regulator.h>
 #include <linux/mfd/max8997.h>
 #include <linux/lcd.h>
 #include <linux/power/max17042_battery.h>
@@ -188,7 +189,7 @@ static struct regulator_consumer_supply ldo14_supply[] = {
 };
 
 static struct regulator_consumer_supply ldo15_supply[] = {
-	REGULATOR_SUPPLY("vled", NULL),
+	REGULATOR_SUPPLY("cm3663", NULL),
 };
 
 static struct regulator_consumer_supply ldo16_supply[] = {
@@ -200,7 +201,7 @@ static struct regulator_consumer_supply ldo17_rev04_supply[] = {
 };
 
 static struct regulator_consumer_supply ldo18_supply[] = {
-	REGULATOR_SUPPLY("touch_led", NULL),
+	REGULATOR_SUPPLY("vled", "leds-regulator.0"),
 };
 
 static struct regulator_consumer_supply ldo21_supply[] = {
@@ -1793,6 +1794,22 @@ static void __init i9100_init_gps(void) {
 }
 
 /******************************************************************************
+ * KEY LED
+ ******************************************************************************/
+static struct led_regulator_platform_data i9100_keyled_data = {
+	.name = "i9100::keyled",
+	.brightness = LED_HALF,
+};
+
+static struct platform_device i9100_keyled = {
+	.name = "leds-regulator",
+	.id = 0,
+	.dev = {
+		.platform_data = &i9100_keyled_data,
+	}
+};
+
+/******************************************************************************
  * DEVFREQ controlling memory/bus
  ******************************************************************************/
 static struct platform_device exynos4_bus_devfreq = {
@@ -1852,6 +1869,8 @@ static struct platform_device *i9100_devices[] __initdata = {
 	&i9100_device_gpio_keys,
 	&i9100_device_gps,
 	&i9100_device_bt,
+
+	&i9100_keyled,
 };
 
 static void __init i9100_pmic_init(void) {
