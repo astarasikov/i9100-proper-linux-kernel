@@ -56,7 +56,6 @@
 #include <plat/camport.h>
 #include <plat/mipi_csis.h>
 
-#include <mach/ohci.h>
 #include <mach/map.h>
 #include <mach/sgs_i9100.h>
 
@@ -1402,7 +1401,6 @@ out1:
 }
 
 static struct s5p_ehci_platdata i9100_ehci_pdata;
-static struct exynos4_ohci_platdata i9100_ohci_pdata;
 static struct s5p_otg_platdata i9100_otg_pdata;
 
 static void __init i9100_init_usb(void) {
@@ -1412,7 +1410,6 @@ static void __init i9100_init_usb(void) {
 	gpio_direction_output(GPIO_USB_SEL, 0);
 	
 	s5p_ehci_set_platdata(&i9100_ehci_pdata);
-	exynos4_ohci_set_platdata(&i9100_ohci_pdata);
 	s5p_otg_set_platdata(&i9100_otg_pdata);
 }
 /******************************************************************************
@@ -1846,7 +1843,6 @@ static struct platform_device *i9100_devices[] __initdata = {
 	&samsung_asoc_dma,
 	&exynos4_bus_devfreq,
 	&exynos4_device_i2s0,
-	&exynos4_device_ohci,
 	&exynos4_device_pd[PD_MFC],
 	&exynos4_device_pd[PD_G3D],
 	&exynos4_device_pd[PD_LCD0],
