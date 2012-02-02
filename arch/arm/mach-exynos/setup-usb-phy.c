@@ -50,8 +50,6 @@ int s5p_usb_phy_init(struct platform_device *pdev, int type)
 		return err;
 	}
 
-	if (exynos4_usb_host_phy_is_on())
-		return 0;
 
 	/* set clock frequency for PLL */
 	phyclk = readl(EXYNOS4_PHYCLK) & ~CLKSEL_MASK;
