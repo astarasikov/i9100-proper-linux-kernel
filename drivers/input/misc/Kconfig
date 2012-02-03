@@ -267,6 +267,16 @@ config INPUT_ATI_REMOTE2
 	  To compile this driver as a module, choose M here: the module will be
 	  called ati_remote2.
 
+config INPUT_K3G
+	tristate "STM K3G digital gyroscope"
+	depends on I2C
+	help
+	  Say Y here to enable support for the STM K3G digital tri-axis
+	  gyroscope.
+
+	  To compile this driver as a module, choose M here: the module will
+	  be called k3g.
+
 config INPUT_KEYSPAN_REMOTE
 	tristate "Keyspan DMR USB remote control (EXPERIMENTAL)"
 	depends on EXPERIMENTAL
