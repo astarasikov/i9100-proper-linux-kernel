@@ -691,7 +691,7 @@ static struct mcs_platform_data touchkey_data = {
 
 static struct i2c_board_info i2c_gpio_touchkey_devs[] __initdata = {
 	{
-		I2C_BOARD_INFO("mcs5080_touchkey", 0x20),
+		I2C_BOARD_INFO("mcs5000_touchkey", 0x20),
 		.platform_data = &touchkey_data,
 	},
 };
