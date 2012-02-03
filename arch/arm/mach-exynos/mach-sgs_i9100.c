@@ -709,6 +709,27 @@ static void __init i9100_init_touchkey(void)
 }
 
 /******************************************************************************
+ * gyroscope and accelerometer
+ ******************************************************************************/
+enum i9100_i2c1_ids {
+	I2C1_GYRO,
+};
+
+static struct i2c_board_info i2c1_devs[] __initdata = {
+	[I2C1_GYRO] = {
+		I2C_BOARD_INFO("k3g", 0x69),
+	},
+};
+
+static void __init i9100_init_k3_sensors(void) {
+	gpio_request(GPIO_GYRO_FIFOP_INT, "GYRO FIFO INT");
+	s5p_register_gpio_interrupt(GPIO_GYRO_FIFOP_INT);
+	s3c_gpio_cfgpin(GPIO_GYRO_FIFOP_INT, S3C_GPIO_SFN(0xf));
+	s3c_gpio_setpull(GPIO_GYRO_FIFOP_INT, S3C_GPIO_PULL_UP);
+	i2c1_devs[I2C1_GYRO].irq = gpio_to_irq(GPIO_GYRO_FIFOP_INT);
+}
+
+/******************************************************************************
  * touchscreen
  *****************************************************************************/
 static struct mxt_platform_data qt602240_platform_data = {
@@ -1819,6 +1840,7 @@ static struct platform_device *i9100_devices[] __initdata = {
 	&s3c_device_i2c5,
 	&s3c_device_i2c0,
 	&emmc_fixed_voltage,
+	&s3c_device_i2c1,
 	&s3c_device_i2c3,
 	&s3c_device_i2c6,
 	&s3c_device_rtc,
@@ -1931,6 +1953,10 @@ static void __init i9100_machine_init(void) {
 	s3c_sdhci3_set_platdata(&i9100_hsmmc3_pdata);
 	
 	s3c_i2c0_set_platdata(&i9100_i2c0_platdata);
+	
+	i9100_init_k3_sensors();
+	s3c_i2c1_set_platdata(NULL);
+	i2c_register_board_info(1, i2c1_devs, ARRAY_SIZE(i2c1_devs));
 	
 	i9100_init_tsp();
 	s3c_i2c3_set_platdata(&i2c3_data);
