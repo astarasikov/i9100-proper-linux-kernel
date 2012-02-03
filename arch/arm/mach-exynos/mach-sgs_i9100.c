@@ -1950,8 +1950,13 @@ static void __init i9100_machine_init(void) {
 
 	//XXX: use rfkill with callback or fix s3d-sdhci
 	s3c_gpio_cfgpin(GPIO_WLAN_EN, S3C_GPIO_OUTPUT);
-	gpio_direction_output(GPIO_WLAN_EN, 1);
-	
+	s3c_gpio_setpull(GPIO_WLAN_EN, S3C_GPIO_PULL_NONE);
+	udelay(200);
+	gpio_set_value(GPIO_WLAN_EN, 0);
+	udelay(200);
+	gpio_set_value(GPIO_WLAN_EN, 1);
+	udelay(200);
+
 	s3c_sdhci0_set_platdata(&i9100_hsmmc0_pdata);
 	s3c_sdhci2_set_platdata(&i9100_hsmmc2_pdata);
 	s3c_sdhci3_set_platdata(&i9100_hsmmc3_pdata);
