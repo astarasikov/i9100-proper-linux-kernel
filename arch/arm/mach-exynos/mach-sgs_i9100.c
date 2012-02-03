@@ -86,6 +86,9 @@ static struct max8997_muic_platform_data i9100_max8997_muic_pdata;
 static struct max8997_led_platform_data i9100_max8997_led_pdata;
 static void i9100_set_usb_path(bool to_ap);
 
+//Will be filled during probe
+static unsigned i9100_hw_revision = 0;
+
 /******************************************************************************
  * UART 
  ********************************************************************************/
@@ -1909,9 +1912,6 @@ static void __init i9100_reserve(void)
 {
 	s5p_mfc_reserve_mem(0x43000000, 8 << 20, 0x51000000, 8 << 20);
 }
-
-//Will be used for revision-specific gpio/regulator fixups
-static unsigned i9100_hw_revision = 0;
 
 static void __init i9100_get_revision(void) {
 	unsigned revision = 0;
