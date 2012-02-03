@@ -1459,11 +1459,15 @@ static struct i2c_board_info i2c_gpio_fm_devs[] __initdata = {
 
 static void __init i9100_init_fm(void)
 {
-	gpio_request(GPIO_FM_INT, "FM IRQ");
-	s5p_register_gpio_interrupt(GPIO_FM_INT);
-	s3c_gpio_cfgpin(GPIO_FM_INT, S3C_GPIO_SFN(0xF));
-	s3c_gpio_setpull(GPIO_FM_INT, S3C_GPIO_PULL_UP);
-	i2c_gpio_fm_devs[0].irq = gpio_to_irq(GPIO_FM_INT);
+	int gpio_int = GPIO_FM_INT;
+	if (i9100_hw_revision > 7) {
+		gpio_int = GPIO_FM_INT_REV07;
+	}
+	gpio_request(gpio_int, "FM IRQ");
+	s5p_register_gpio_interrupt(gpio_int);
+	s3c_gpio_cfgpin(gpio_int, S3C_GPIO_SFN(0xF));
+	s3c_gpio_setpull(gpio_int, S3C_GPIO_PULL_UP);
+	i2c_gpio_fm_devs[0].irq = gpio_to_irq(gpio_int);
 	
 	gpio_request(GPIO_FM_RST, "FM Reset");
 	s3c_gpio_cfgpin(GPIO_FM_RST, S3C_GPIO_OUTPUT);
