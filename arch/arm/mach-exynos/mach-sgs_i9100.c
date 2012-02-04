@@ -1902,6 +1902,100 @@ static void __init i9100_pmic_init(void) {
 	gpio_request(GPIO_PMIC_IRQ, "PMIC_IRQ");
 	s3c_gpio_setpull(GPIO_PMIC_IRQ, S3C_GPIO_PULL_NONE);
 }
+/******************************************************************************
+ * modem debugging
+ ******************************************************************************/
+#include <linux/module.h>
+static bool i9100_modem_state = 0;
+
+static ssize_t i9100_modem_show(struct device *dev,
+	struct device_attribute *attr, char *buf) {
+	return sprintf(buf, "%d\n", i9100_modem_state);
+}
+
+static ssize_t i9100_modem_store(struct device *dev,
+	struct device_attribute *attr, const char *buf, size_t count) {
+	bool enable = false;
+	if (strncmp(buf, "0", 1)) {
+		enable = true;
+	}
+	
+	if (enable == i9100_modem_state) {
+		pr_info("[MODEM]: already %d\n", enable);
+		return -EINVAL;
+	}
+
+	if (enable) {
+		s3c_gpio_cfgpin(GPIO_PHONE_ON, S3C_GPIO_OUTPUT);
+		s3c_gpio_setpull(GPIO_PHONE_ON, S3C_GPIO_PULL_NONE);
+		s3c_gpio_cfgpin(GPIO_CP_RST, S3C_GPIO_OUTPUT);
+		s3c_gpio_setpull(GPIO_CP_RST, S3C_GPIO_PULL_NONE);
+		s3c_gpio_cfgpin(GPIO_PDA_ACTIVE, S3C_GPIO_OUTPUT);
+		s3c_gpio_setpull(GPIO_PDA_ACTIVE, S3C_GPIO_PULL_NONE);
+		s3c_gpio_cfgpin(GPIO_ACTIVE_STATE, S3C_GPIO_OUTPUT);
+		s3c_gpio_setpull(GPIO_ACTIVE_STATE, S3C_GPIO_PULL_NONE);
+		s3c_gpio_cfgpin(GPIO_CP_REQ_RESET, S3C_GPIO_OUTPUT);
+		s3c_gpio_setpull(GPIO_CP_REQ_RESET, S3C_GPIO_PULL_NONE);
+
+		pr_info("[MODEM]: enabling\n");
+		gpio_set_value(GPIO_PHONE_ON, 0);
+		gpio_set_value(GPIO_CP_RST, 0);
+		udelay(160);
+
+		gpio_set_value(GPIO_PDA_ACTIVE, 0);
+		gpio_set_value(GPIO_ACTIVE_STATE, 0);
+		msleep(100);
+
+		gpio_set_value(GPIO_CP_RST, 1);
+		udelay(160);
+		gpio_set_value(GPIO_CP_REQ_RESET, 1);
+		udelay(160);
+
+		gpio_set_value(GPIO_PHONE_ON, 1);
+		msleep(20);
+		gpio_set_value(GPIO_ACTIVE_STATE, 1);
+		gpio_set_value(GPIO_PDA_ACTIVE, 1);
+	}
+	else {
+		pr_info("[MODEM]: disabling\n");
+		gpio_set_value(GPIO_PDA_ACTIVE, 0);
+		gpio_set_value(GPIO_ACTIVE_STATE, 0);
+		gpio_set_value(GPIO_PHONE_ON, 0);
+		gpio_set_value(GPIO_CP_RST, 0);
+	}
+
+	i9100_modem_state = enable;
+
+	return count;
+}
+
+
+static DEVICE_ATTR(mpwr, 0664, i9100_modem_show, i9100_modem_store);
+
+static int __init i9100_modem_hackery(void) {
+	struct class *modem_class = class_create(THIS_MODULE, "modem");
+	struct device *modem_dev;
+	int ret;
+	if (IS_ERR(modem_class)) {
+		pr_err("failed to create modem class\n");
+		return -ENODEV;
+	}
+
+	modem_dev = device_create(modem_class, NULL, 0, NULL, "xmm6260");
+	if (IS_ERR(modem_dev)) {
+		pr_err("failed to create modem device\n");
+		return -ENODEV;
+	}
+
+	ret = device_create_file(modem_dev, &dev_attr_mpwr);
+	if (ret) {
+		pr_err("failed to create modem power attr\n");
+	}
+	
+	return ret;
+}
+
+late_initcall(i9100_modem_hackery);
 
 /******************************************************************************
  * machine initialization
