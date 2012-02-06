@@ -1931,7 +1931,7 @@ static int i9100_modem_resume(struct device *dev) {
 	return i9100_modem_set_regulator(dev, true);
 }
 
-static modem_state i9100_modem_get_state(struct device *dev) {
+static enum modem_state i9100_modem_get_state(struct device *dev) {
 	enum modem_state ret = 0;
 	if (gpio_get_value(GPIO_PHONE_ON)) {
 		ret |= MODEM_ON;
