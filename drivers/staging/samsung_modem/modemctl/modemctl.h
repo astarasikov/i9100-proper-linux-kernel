@@ -29,7 +29,7 @@ struct modemctl_platform_data {
 	void (*exit)(struct device *dev);
 	int (*reset)(struct device *dev);
 	int (*set_power)(struct device *dev, bool enabled);
-	modem_state (*get_state)(struct device *dev);
+	enum modem_state (*get_state)(struct device *dev);
 	int (*suspend)(struct device *dev);
 	int (*resume)(struct device *dev);
 };
