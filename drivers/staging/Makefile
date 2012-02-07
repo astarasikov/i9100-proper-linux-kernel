@@ -58,3 +58,4 @@ obj-$(CONFIG_DRM_PSB)		+= gma500/
 obj-$(CONFIG_INTEL_MEI)		+= mei/
 obj-$(CONFIG_MFD_NVEC)		+= nvec/
 obj-$(CONFIG_SND_SOC_ORIGEN_ALC5625)	+= alc5625/
+obj-$(CONFIG_USB_CDC_SVNET) += samsung_modem/
