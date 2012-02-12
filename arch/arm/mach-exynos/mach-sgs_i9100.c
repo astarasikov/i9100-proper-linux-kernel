@@ -68,10 +68,10 @@ enum fixed_regulator_id {
 };
 
 enum i2c_bus_ids {
-	I2C_GPIO_BUS_TOUCHKEY = 8,
+	I2C_GPIO_BUS_TOUCHKEY = 10,
+	I2C_GPIO_BUS_PROX = 11,
 	I2C_GPIO_BUS_GAUGE,
 	I2C_GPIO_BUS_USB,
-	I2C_GPIO_BUS_PROX,
 	I2C_GPIO_BUS_MHL,
 	I2C_GPIO_BUS_FM,
 };
@@ -82,6 +82,7 @@ enum sgs2_rfk_id {
 };
 
 #define M5MO_VREG_CONSUMER "0-001f"
+#define CM3663_VREG_CONSUMER "11-0020"
 #define MODEM_VREG "vhsic-modem"
 
 static struct max8997_muic_platform_data i9100_max8997_muic_pdata;
@@ -194,7 +195,7 @@ static struct regulator_consumer_supply ldo14_supply[] = {
 };
 
 static struct regulator_consumer_supply ldo15_supply[] = {
-	REGULATOR_SUPPLY("cm3663", NULL),
+	REGULATOR_SUPPLY("vled", CM3663_VREG_CONSUMER),
 };
 
 static struct regulator_consumer_supply ldo16_supply[] = {
@@ -1736,7 +1737,7 @@ static void __init i9100_init_fm(void)
 /******************************************************************************
  * USB switch
  ******************************************************************************/
- static struct i2c_gpio_platform_data i2c_gpio_usb_data = {
+static struct i2c_gpio_platform_data i2c_gpio_usb_data = {
 	.sda_pin	= GPIO_USB_SDA,
 	.scl_pin	= GPIO_USB_SCL,
 };
@@ -2078,6 +2079,39 @@ static struct platform_device i9100_keyled = {
 };
 
 /******************************************************************************
+ * proximity and light sensor
+ ******************************************************************************/
+static struct i2c_gpio_platform_data i2c_gpio_prox_data = {
+	.sda_pin	= GPIO_PS_ALS_SDA,
+	.scl_pin	= GPIO_PS_ALS_SCL,
+};
+
+struct platform_device i2c_gpio_prox = {
+	.name = "i2c-gpio",
+	.id = I2C_GPIO_BUS_PROX,
+	.dev.platform_data = &i2c_gpio_prox_data,
+};
+
+static struct i2c_board_info i2c_gpio_prox_devs[] __initdata = {
+	{
+		I2C_BOARD_INFO("cm3663", 0x20),
+	},
+};
+
+static void __init i9100_init_proximity_sensor(void)
+{
+	gpio_request(GPIO_PS_ALS_INT, "P/LS SENSOR INT");
+	s5p_register_gpio_interrupt(GPIO_PS_ALS_INT);
+	s3c_gpio_cfgpin(GPIO_PS_ALS_INT, S3C_GPIO_SFN(0xf));
+	s3c_gpio_setpull(GPIO_PS_ALS_INT, S3C_GPIO_PULL_UP);
+	i2c_gpio_prox_devs[0].irq = gpio_to_irq(GPIO_PS_ALS_INT);
+
+	i2c_register_board_info(I2C_GPIO_BUS_PROX,
+		i2c_gpio_prox_devs, ARRAY_SIZE(i2c_gpio_prox_devs));
+}
+
+
+/******************************************************************************
  * xmm6260 modem
  ******************************************************************************/
 #include <linux/../../drivers/staging/samsung_modem/modemctl/modemctl.h>
@@ -2368,6 +2402,7 @@ static struct platform_device *i9100_devices[] __initdata = {
 	&lcd_spi_gpio,
 	&i2c_gpio_touchkey,
 	&i2c_gpio_usb,
+	&i2c_gpio_prox,
 	&i2c_gpio_gauge,
 	&i2c_gpio_fm,
 
@@ -2468,6 +2503,7 @@ static void __init i9100_machine_init(void) {
 	i9100_init_bt();
 	i9100_init_gps();
 	i9100_init_modem();
+	i9100_init_proximity_sensor();
 	
 	platform_add_devices(i9100_devices, ARRAY_SIZE(i9100_devices));
 
