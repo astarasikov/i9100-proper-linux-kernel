@@ -142,11 +142,10 @@ static struct s3c2410_uartcfg i9100_uartcfgs[] __initdata = {
  * voltage regulator
  *****************************************************************************/
 static struct regulator_consumer_supply ldo1_supply[] = {
-	REGULATOR_SUPPLY("vdd", "s5p-adc"), /* Used by CPU's ADC drv */
+	REGULATOR_SUPPLY("vdd", "samsung-adc-v3"),
 };
 
 static struct regulator_consumer_supply ldo3_supply[] = {
-	//vusb_1.1v
 	REGULATOR_SUPPLY("pd_io", NULL),
 	REGULATOR_SUPPLY("vdd11", NULL), /* MIPI */
 };
@@ -174,6 +173,7 @@ static struct regulator_consumer_supply ldo8_supply[] = {
 
 static struct regulator_consumer_supply ldo10_supply[] = {
 	REGULATOR_SUPPLY("vpll_1.2v", NULL),
+	REGULATOR_SUPPLY("vpll_1.1v", NULL),
 };
 
 static struct regulator_consumer_supply ldo11_supply[] = {
@@ -250,42 +250,265 @@ static struct regulator_consumer_supply led_movie_supply[] = {
 	REGULATOR_SUPPLY("led_movie", NULL),
 };
 
-#define VREG(_ldo, _name, _min_uV, _max_uV, _always_on, _ops_mask) \
-	static struct regulator_init_data _ldo##_init_data = {		\
-		.constraints = {					\
-			.name	= _name,				\
-			.min_uV = _min_uV,				\
-			.max_uV = _max_uV,				\
-			.always_on	= _always_on,			\
-			.boot_on	= _always_on,			\
-			.apply_uV	= 1,				\
-			.valid_ops_mask = _ops_mask,			\
-			.state_mem	= {				\
-				.disabled	= 1,		\
-				.enabled	= 0,		\
-			}						\
-		},							\
-		.num_consumer_supplies = ARRAY_SIZE(_ldo##_supply),	\
-		.consumer_supplies = &_ldo##_supply[0],			\
-	};
+static struct regulator_init_data ldo1_init_data = {
+	.constraints = {
+		.name = "VADC_3.3V_C210",
+		.min_uV = 3300000,
+		.max_uV = 3300000,
+		.always_on = 1,
+		.boot_on = 1,
+		.apply_uV = 1,
+		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
+		.state_mem = {
+			.disabled = 1,
+		}
+	},
+	.num_consumer_supplies = ARRAY_SIZE(ldo1_supply),
+	.consumer_supplies = ldo1_supply,
+};
 
-VREG(ldo1, "VADC_3.3V_C210", 3300000, 3300000, 1,  REGULATOR_CHANGE_STATUS);
-VREG(ldo3, "VUSB_1.1V", 1100000, 1100000, 1,  REGULATOR_CHANGE_STATUS);
-VREG(ldo4, "VMIPI_1.8V", 1800000, 1800000, 1,  REGULATOR_CHANGE_STATUS);
-VREG(ldo5, "VHSIC_1.2V", 1200000, 1200000, 1,  REGULATOR_CHANGE_STATUS);
-VREG(ldo7, "CAM_ISP_1.8V", 1800000, 1800000, 0,  REGULATOR_CHANGE_STATUS);
-VREG(ldo8, "VUSB_3.3V", 3300000, 3300000, 1,  REGULATOR_CHANGE_STATUS);
-VREG(ldo10, "VPLL_1.2V", 1200000, 1200000, 1,  REGULATOR_CHANGE_STATUS);
-VREG(ldo11, "TOUCH_2.8V", 2800000, 2800000, 1,  REGULATOR_CHANGE_STATUS);
-VREG(ldo12, "VT_CAM_1.8V", 1800000, 1800000, 0,  REGULATOR_CHANGE_STATUS);
-VREG(ldo13, "VCC_3.0V_LCD", 3000000, 3000000, 1,  REGULATOR_CHANGE_STATUS);
-VREG(ldo14, "VCC_2.8V_MOTOR", 2800000, 2800000, 0,  REGULATOR_CHANGE_STATUS);
-VREG(ldo15, "LED_A_2.8V", 2800000, 2800000, 1,  REGULATOR_CHANGE_STATUS);
-VREG(ldo16, "CAM_SENSOR_IO_1.8V", 1800000, 1800000, 0, REGULATOR_CHANGE_STATUS);
-VREG(ldo17_rev04, "VTF_2.8V", 2800000, 2800000, 0, REGULATOR_CHANGE_STATUS);
-VREG(ldo18, "TOUCH_LED_3.3V", 3000000, 3300000, 0,
-	REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_VOLTAGE);
-VREG(ldo21, "VDDQ_M1M2_1.2V", 1200000, 1200000, 1,  REGULATOR_CHANGE_STATUS);
+static struct regulator_init_data ldo3_init_data = {
+	.constraints = {
+		.name = "VUSB_1.1V",
+		.min_uV = 1100000,
+		.max_uV = 1100000,
+		.always_on = 1,
+		.boot_on = 1,
+		.apply_uV = 1,
+		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
+		.state_mem = {
+			.disabled = 1,
+		}
+	},
+	.num_consumer_supplies = ARRAY_SIZE(ldo3_supply),
+	.consumer_supplies = ldo3_supply,
+};
+
+static struct regulator_init_data ldo4_init_data = {
+	.constraints = {
+		.name = "VMIPI_1.8V",
+		.min_uV = 1800000,
+		.max_uV = 1800000,
+		.always_on = 1,
+		.boot_on = 1,
+		.apply_uV = 1,
+		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
+		.state_mem = {
+			.disabled = 1,
+		}
+	},
+	.num_consumer_supplies = ARRAY_SIZE(ldo4_supply),
+	.consumer_supplies = ldo4_supply,
+};
+
+static struct regulator_init_data ldo5_init_data = {
+	.constraints = {
+		.name = "VHSIC_1.2V",
+		.min_uV = 1200000,
+		.max_uV = 1200000,
+		.always_on = 1,
+		.boot_on = 1,
+		.apply_uV = 1,
+		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
+		.state_mem = {
+			.disabled = 1,
+		}
+	},
+	.num_consumer_supplies = ARRAY_SIZE(ldo5_supply),
+	.consumer_supplies = ldo5_supply,
+};
+
+static struct regulator_init_data ldo7_init_data = {
+	.constraints = {
+		.name = "CAM_ISP_1.8V",
+		.min_uV = 1800000,
+		.max_uV = 1800000,
+		.apply_uV = 1,
+		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
+		.state_mem = {
+			.disabled = 1,
+		}
+	},
+	.num_consumer_supplies = ARRAY_SIZE(ldo7_supply),
+	.consumer_supplies = ldo7_supply,
+};
+
+static struct regulator_init_data ldo8_init_data = {
+	.constraints = {
+		.name = "VUSB_3.3V",
+		.min_uV = 3300000,
+		.max_uV = 3300000,
+		.always_on = 1,
+		.boot_on = 1,
+		.apply_uV = 1,
+		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
+		.state_mem = {
+			.disabled = 1,
+		}
+	},
+	.num_consumer_supplies = ARRAY_SIZE(ldo8_supply),
+	.consumer_supplies = ldo8_supply,
+};
+
+static struct regulator_init_data ldo10_init_data = {
+	.constraints = {
+		.name = "VPLL_1.2V",
+		.min_uV = 1200000,
+		.max_uV = 1200000,
+		.always_on = 1,
+		.boot_on = 1,
+		.apply_uV = 1,
+		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
+		.state_mem = {
+			.disabled = 1,
+		}
+	},
+	.num_consumer_supplies = ARRAY_SIZE(ldo10_supply),
+	.consumer_supplies = ldo10_supply,
+};
+
+static struct regulator_init_data ldo11_init_data = {
+	.constraints = {
+		.name = "TOUCH_2.8V",
+		.min_uV = 2800000,
+		.max_uV = 2800000,
+		.always_on = 1,
+		.boot_on = 1,
+		.apply_uV = 1,
+		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
+		.state_mem = {
+			.disabled = 1,
+		}
+	},
+	.num_consumer_supplies = ARRAY_SIZE(ldo11_supply),
+	.consumer_supplies = ldo11_supply,
+};
+
+static struct regulator_init_data ldo12_init_data = {
+	.constraints = {
+		.name = "VT_CAM_1.8V",
+		.min_uV = 1800000,
+		.max_uV = 1800000,
+		.apply_uV = 1,
+		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
+		.state_mem = {
+			.disabled = 1,
+		}
+	},
+	.num_consumer_supplies = ARRAY_SIZE(ldo12_supply),
+	.consumer_supplies = ldo12_supply,
+};
+
+static struct regulator_init_data ldo13_init_data = {
+	.constraints = {
+		.name = "VCC_3.0V_LCD",
+		.min_uV = 3000000,
+		.max_uV = 3000000,
+		.always_on = 1,
+		.boot_on = 1,
+		.apply_uV = 1,
+		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
+		.state_mem = {
+			.disabled = 1,
+		}
+	},
+	.num_consumer_supplies = ARRAY_SIZE(ldo13_supply),
+	.consumer_supplies = ldo13_supply,
+};
+
+static struct regulator_init_data ldo14_init_data = {
+	.constraints = {
+		.name = "VCC_2.8V_MOTOR",
+		.min_uV = 2800000,
+		.max_uV = 2800000,
+		.apply_uV = 1,
+		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
+		.state_mem = {
+			.disabled = 1,
+		}
+	},
+	.num_consumer_supplies = ARRAY_SIZE(ldo14_supply),
+	.consumer_supplies = ldo14_supply,
+};
+
+static struct regulator_init_data ldo15_init_data = {
+	.constraints = {
+		.name = "LED_A_2.8V",
+		.min_uV = 2800000,
+		.max_uV = 2800000,
+		.always_on = 1,
+		.boot_on = 1,
+		.apply_uV = 1,
+		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
+		.state_mem = {
+			.disabled = 1,
+		}
+	},
+	.num_consumer_supplies = ARRAY_SIZE(ldo15_supply),
+	.consumer_supplies = ldo15_supply,
+};
+
+static struct regulator_init_data ldo16_init_data = {
+	.constraints = {
+		.name = "CAM_SENSOR_IO_1.8V",
+		.min_uV = 1800000,
+		.max_uV = 1800000,
+		.apply_uV = 1,
+		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
+		.state_mem = {
+			.disabled = 1,
+		}
+	},
+	.num_consumer_supplies = ARRAY_SIZE(ldo16_supply),
+	.consumer_supplies = ldo16_supply,
+};
+
+static struct regulator_init_data ldo17_rev04_init_data = {
+	.constraints = {
+		.name = "VTF_2.8V",
+		.min_uV = 2800000,
+		.max_uV = 2800000,
+		.apply_uV = 1,
+		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
+		.state_mem = {
+			.disabled = 1,
+		}
+	},
+	.num_consumer_supplies = ARRAY_SIZE(ldo17_rev04_supply),
+	.consumer_supplies = ldo17_rev04_supply,
+};
+
+static struct regulator_init_data ldo18_init_data = {
+	.constraints = {
+		.name = "TOUCH_LED_3.3V",
+		.min_uV = 3000000,
+		.max_uV = 3300000,
+		.apply_uV = 1,
+		.valid_ops_mask = REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_VOLTAGE,
+		.state_mem = {
+			.disabled = 1,
+		}
+	},
+	.num_consumer_supplies = ARRAY_SIZE(ldo18_supply),
+	.consumer_supplies = ldo18_supply,
+};
+
+static struct regulator_init_data ldo21_init_data = {
+	.constraints = {
+		.name = "VDDQ_M1M2_1.2V",
+		.min_uV = 1200000,
+		.max_uV = 1200000,
+		.always_on = 1,
+		.boot_on = 1,
+		.apply_uV = 1,
+		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
+		.state_mem = {
+			.disabled = 1,
+		}
+	},
+	.num_consumer_supplies = ARRAY_SIZE(ldo21_supply),
+	.consumer_supplies = ldo21_supply,
+};
 
 static struct regulator_init_data buck1_init_data = {
 	.constraints	= {
@@ -328,7 +551,7 @@ static struct regulator_init_data buck2_init_data = {
 static struct regulator_init_data buck3_init_data = {
 	.constraints	= {
 		.name		= "G3D_1.1V",
-		.min_uV		= 800000,
+		.min_uV		= 900000,
 		.max_uV		= 1200000,
 		.always_on	= 0,
 		.boot_on	= 0,
@@ -393,6 +616,7 @@ static struct regulator_init_data safeout1_init_data = {
 	.constraints	= {
 		.name		= "SAFEOUT1",
 		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
+		.boot_on = 1,
 		.state_mem	= {
 			.enabled = 1,
 		},
@@ -406,7 +630,7 @@ static struct regulator_init_data safeout2_init_data = {
 		.name		= "SAFEOUT2",
 		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
 		.state_mem	= {
-			.disabled = 1,
+			.enabled = 1,
 		},
 	},
 	.num_consumer_supplies	= ARRAY_SIZE(safeout2_supply),
@@ -415,7 +639,7 @@ static struct regulator_init_data safeout2_init_data = {
 
 static struct regulator_init_data led_flash_init_data = {
 	.constraints = {
-		.name	= "CHARGER_CV",
+		.name	= "FLASH_CUR",
 		.min_uA = 23440,
 		.max_uA = 750080,
 		.valid_ops_mask	= REGULATOR_CHANGE_CURRENT |
@@ -430,7 +654,7 @@ static struct regulator_init_data led_flash_init_data = {
 
 static struct regulator_init_data led_movie_init_data = {
 	.constraints = {
-		.name	= "CHARGER",
+		.name	= "MOVIE_CUR",
 		.min_uA = 15625,
 		.max_uA = 250000,
 		.valid_ops_mask	= REGULATOR_CHANGE_CURRENT |
