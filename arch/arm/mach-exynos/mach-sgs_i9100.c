@@ -1168,12 +1168,6 @@ static struct spi_board_info spi_board_info[] __initdata = {
 
 static void __init ld9040_cfg_gpio(void)
 {
-	/* drive strength to max[4X] */
-	writel(0xffffffff, S5P_VA_GPIO + 0x18c);
-	writel(0xffffffff, S5P_VA_GPIO + 0x1ac);
-	writel(0xffffffff, S5P_VA_GPIO + 0x1cc);
-	writel(readl(S5P_VA_GPIO + 0x1ec) | 0xffffff, S5P_VA_GPIO + 0x1ec);
-
 	s3c_gpio_cfgpin(GPIO_LCD_RESET, S3C_GPIO_OUTPUT);
 	s3c_gpio_setpull(GPIO_LCD_RESET, S3C_GPIO_PULL_NONE);
 
@@ -2344,7 +2338,7 @@ static struct platform_device *i9100_devices[] __initdata = {
 	&s3c_device_hsmmc0,
 	&s3c_device_hsmmc2,
 	&s3c_device_hsmmc3,
-	&s3c_device_timer[0],
+	&s3c_device_timer[1],
 	&s3c_device_usbgadget,
 	&s3c_device_wdt,
 	&s5p_device_ehci,
