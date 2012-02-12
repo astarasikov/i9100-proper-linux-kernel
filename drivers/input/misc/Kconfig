@@ -591,4 +591,13 @@ config INPUT_XEN_KBDDEV_FRONTEND
 	  To compile this driver as a module, choose M here: the
 	  module will be called xen-kbdfront.
 
+config INPUT_CM3663
+	tristate "CM3663 light and proximity sensor"
+	depends on I2C
+	help
+	  Say Y here to enable support for the CM3663 light and proximity sensor.
+
+	  To compile this driver as a module, choose M here: the module will
+	  be called cm3663.
+
 endif
