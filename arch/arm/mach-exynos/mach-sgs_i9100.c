@@ -1033,7 +1033,7 @@ static void __init i9100_init_tsp(void) {
 	s3c_gpio_cfgpin(GPIO_TSP_LDO_ON, S3C_GPIO_OUTPUT);
 	s3c_gpio_setpull(GPIO_TSP_LDO_ON, S3C_GPIO_PULL_NONE);
 	gpio_direction_output(GPIO_TSP_LDO_ON, 1);
-	mdelay(100);
+	msleep(100);
 }
 
 /******************************************************************************
