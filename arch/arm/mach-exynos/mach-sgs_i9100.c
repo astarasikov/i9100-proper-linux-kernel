@@ -61,6 +61,7 @@
 
 enum fixed_regulator_id {
 	FIXED_REG_ID_MMC = 0,
+	FIXED_REG_ID_WLAN,
 	FIXED_REG_ID_CAM_A28V,
 	FIXED_REG_ID_CAM_12V,
 	FIXED_REG_ID_CAM_28V,
@@ -776,6 +777,38 @@ static struct platform_device emmc_fixed_voltage = {
 	.id			= FIXED_REG_ID_MMC,
 	.dev			= {
 		.platform_data	= &emmc_fixed_voltage_config,
+	},
+};
+
+/******************************************************************************
+ * WLAN voltage regulator
+ ******************************************************************************/
+static struct regulator_consumer_supply wlan_supplies[] = {
+	REGULATOR_SUPPLY("vmmc", "s3c-sdhci.3"),
+};
+
+static struct regulator_init_data wlan_fixed_voltage_init_data = {
+	.constraints		= {
+		.name		= "WLAN_VDD",
+		.valid_ops_mask	= REGULATOR_CHANGE_STATUS,
+	},
+	.num_consumer_supplies	= ARRAY_SIZE(wlan_supplies),
+	.consumer_supplies	= wlan_supplies,
+};
+
+static struct fixed_voltage_config wlan_fixed_voltage_config = {
+	.supply_name		= "WLAN_EN",
+	.microvolts		= 3300000,
+	.gpio			= GPIO_WLAN_EN,
+	.enable_high		= true,
+	.init_data		= &wlan_fixed_voltage_init_data,
+};
+
+static struct platform_device wlan_fixed_voltage = {
+	.name			= "reg-fixed-voltage",
+	.id			= FIXED_REG_ID_WLAN,
+	.dev			= {
+		.platform_data	= &wlan_fixed_voltage_config,
 	},
 };
 
@@ -2303,6 +2336,7 @@ static struct platform_device *i9100_devices[] __initdata = {
 	&s3c_device_i2c5,
 	&s3c_device_i2c0,
 	&emmc_fixed_voltage,
+	&wlan_fixed_voltage,
 	&s3c_device_i2c1,
 	&s3c_device_i2c3,
 	&s3c_device_i2c6,
@@ -2405,14 +2439,8 @@ static void __init i9100_machine_init(void) {
 
 	i9100_pmic_init();
 
-	//XXX: use rfkill with callback or fix s3d-sdhci
 	s3c_gpio_cfgpin(GPIO_WLAN_EN, S3C_GPIO_OUTPUT);
 	s3c_gpio_setpull(GPIO_WLAN_EN, S3C_GPIO_PULL_NONE);
-	udelay(200);
-	gpio_set_value(GPIO_WLAN_EN, 0);
-	udelay(200);
-	gpio_set_value(GPIO_WLAN_EN, 1);
-	udelay(200);
 
 	s3c_sdhci0_set_platdata(&i9100_hsmmc0_pdata);
 	s3c_sdhci2_set_platdata(&i9100_hsmmc2_pdata);
