@@ -87,6 +87,7 @@ enum sgs2_rfk_id {
 
 static struct max8997_muic_platform_data i9100_max8997_muic_pdata;
 static struct max8997_led_platform_data i9100_max8997_led_pdata;
+static struct max8997_haptic_platform_data i9100_max8997_haptic_pdata;
 static void i9100_set_usb_path(bool to_ap);
 
 //Will be filled during probe
@@ -739,6 +740,7 @@ static struct max8997_platform_data __initdata i9100_max8997_pdata = {
 
 	.muic_pdata = &i9100_max8997_muic_pdata,
 	.led_pdata = &i9100_max8997_led_pdata,
+	.haptic_pdata = &i9100_max8997_haptic_pdata,
 };
 
 static struct i2c_board_info i2c5_devs[] __initdata = {
@@ -859,6 +861,14 @@ static struct max8997_led_platform_data i9100_max8997_led_pdata = {
 		0,
 		0,
 	}
+};
+
+static struct max8997_haptic_platform_data i9100_max8997_haptic_pdata = {
+	.pwm_channel_id = 1,
+	.pwm_period = 30000,
+	.type = MAX8997_HAPTIC_ERM,
+	.mode = MAX8997_EXTERNAL_MODE,
+	.pwm_divisor = MAX8997_PWM_DIVISOR_128,
 };
 
 /******************************************************************************
