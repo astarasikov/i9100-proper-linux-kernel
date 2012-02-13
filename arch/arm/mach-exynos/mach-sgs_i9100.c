@@ -750,6 +750,15 @@ static struct i2c_board_info i2c5_devs[] __initdata = {
 	},
 };
 
+static void __init i9100_init_pmic(void) {
+	gpio_request(GPIO_PMIC_IRQ, "PMIC_IRQ");
+	s5p_register_gpio_interrupt(GPIO_PMIC_IRQ);
+	s3c_gpio_cfgpin(GPIO_PMIC_IRQ, S3C_GPIO_SFN(0xf));
+	s3c_gpio_setpull(GPIO_PMIC_IRQ, S3C_GPIO_PULL_UP);
+	i2c5_devs[0].irq = gpio_to_irq(GPIO_PMIC_IRQ);
+
+}
+
 /******************************************************************************
  * EMMC voltage regulator
  ******************************************************************************/
@@ -2325,6 +2334,10 @@ static struct platform_device i9100_modem_device = {
 };
 
 static void __init i9100_init_modem(void) {
+	gpio_request(GPIO_FLM_RXD, "FLM_RXD");
+	gpio_request(GPIO_FLM_TXD, "FLM_TXD");
+	s3c_gpio_cfgrange_nopull(EXYNOS4_GPA1(4), 2, S3C_GPIO_SFN(2));
+
 	s3c_gpio_cfgpin(GPIO_PHONE_ON, S3C_GPIO_OUTPUT);
 	s3c_gpio_setpull(GPIO_PHONE_ON, S3C_GPIO_PULL_NONE);
 	s3c_gpio_cfgpin(GPIO_CP_RST, S3C_GPIO_OUTPUT);
@@ -2429,10 +2442,6 @@ static struct platform_device *i9100_devices[] __initdata = {
 	&i9100_modem_device,
 };
 
-static void __init i9100_pmic_init(void) {
-	gpio_request(GPIO_PMIC_IRQ, "PMIC_IRQ");
-	s3c_gpio_setpull(GPIO_PMIC_IRQ, S3C_GPIO_PULL_NONE);
-}
 
 /******************************************************************************
  * machine initialization
@@ -2468,7 +2477,8 @@ static void __init i9100_get_revision(void) {
 
 static int __init i9100_late_init(void) {
 	i9100_set_usb_mipi(1);
-	i9100_set_usb_path(1);
+	i9100_set_usb_path(0);
+	i9100_init_modem();
 	return 0;
 }
 device_initcall(i9100_late_init);
@@ -2477,11 +2487,9 @@ static void __init i9100_machine_init(void) {
 	i9100_get_revision();
 	i9100_config_gpio_table();
 
-	i9100_pmic_init();
-
 	s3c_gpio_cfgpin(GPIO_WLAN_EN, S3C_GPIO_OUTPUT);
 	s3c_gpio_setpull(GPIO_WLAN_EN, S3C_GPIO_PULL_NONE);
-
+	
 	s3c_sdhci0_set_platdata(&i9100_hsmmc0_pdata);
 	s3c_sdhci2_set_platdata(&i9100_hsmmc2_pdata);
 	s3c_sdhci3_set_platdata(&i9100_hsmmc3_pdata);
@@ -2496,8 +2504,8 @@ static void __init i9100_machine_init(void) {
 	s3c_i2c3_set_platdata(&i2c3_data);
 	i2c_register_board_info(3, i2c3_devs, ARRAY_SIZE(i2c3_devs));
 
+	i9100_init_pmic();
 	s3c_i2c5_set_platdata(NULL);
-	i2c5_devs[0].irq = gpio_to_irq(GPIO_PMIC_IRQ);
 	i2c_register_board_info(5, i2c5_devs, ARRAY_SIZE(i2c5_devs));
 
 	s3c_i2c6_set_platdata(NULL);
@@ -2513,7 +2521,6 @@ static void __init i9100_machine_init(void) {
 	i9100_init_camera();
 	i9100_init_bt();
 	i9100_init_gps();
-	i9100_init_modem();
 	i9100_init_proximity_sensor();
 	
 	platform_add_devices(i9100_devices, ARRAY_SIZE(i9100_devices));
