@@ -2196,7 +2196,7 @@ static struct gpio i9100_modem_gpios[] = {
 
 static int i9100_modem_ctl_init(struct device *dev) {
 	if (gpio_request_array(i9100_modem_gpios, ARRAY_SIZE(i9100_modem_gpios))) {
-		dev_err(dev, "%s: failed to request GPIO\n", __func__);
+		//dev_err(dev, "%s: failed to request GPIO\n", __func__);
 		return -ENODEV;
 	}
 	return 0;
@@ -2205,21 +2205,25 @@ static int i9100_modem_ctl_init(struct device *dev) {
 static int i9100_modem_set_regulator(struct device *dev, bool enable) {
 	struct regulator *reg;
 	int err = 0;
-	reg = regulator_get(dev, MODEM_VREG);
+	reg = regulator_get(NULL, MODEM_VREG);
+	//reg = regulator_get(dev, MODEM_VREG);
 	if (IS_ERR(reg)) {
 		err = PTR_ERR(reg);
-		dev_err(dev, "failed to get modem regulator: %d\n", err);
+		//dev_err(dev, "failed to get modem regulator: %d\n", err);
+		pr_err("%s: failed to get modem regulator: %d\n", __func__, err);
 		goto fail;
 	}
 
 	if (enable) {
 		err = regulator_enable(reg);
-			dev_err(dev, "failed to enable regulator: %d\n", err);
+		//dev_err(dev, "failed to enable regulator: %d\n", err);
+		pr_err("%s: failed to enable regulator: %d\n", __func__, err);
 	}
 	else {
 		err = regulator_disable(reg);
 		if (err) {
-			dev_err(dev, "failed to disable regulator: %d\n", err);
+			//dev_err(dev, "failed to disable regulator: %d\n", err);
+			pr_err("%s: failed to disable regulator: %d\n", __func__, err);
 		}
 	}
 
@@ -2364,6 +2368,11 @@ static void __init i9100_init_modem(void) {
 	s5p_register_gpio_interrupt(GPIO_CP_DUMP_INT);
 	s3c_gpio_cfgpin(GPIO_CP_DUMP_INT, S3C_GPIO_SFN(0xf));
 	s3c_gpio_setpull(GPIO_CP_DUMP_INT, S3C_GPIO_PULL_DOWN);
+
+	//FIXME: enabling statically until modemctl is reimplemented
+	i9100_modem_ctl_init(NULL);
+	i9100_modem_set_regulator(NULL, true);
+	i9100_modem_set_power(NULL, true);
 }
 /******************************************************************************
  * Sound
