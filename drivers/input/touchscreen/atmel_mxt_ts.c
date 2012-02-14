@@ -402,6 +402,7 @@ static int __mxt_read_reg(struct i2c_client *client,
 {
 	struct i2c_msg xfer[2];
 	u8 buf[2];
+	int i;
 
 	buf[0] = reg & 0xff;
 	buf[1] = (reg >> 8) & 0xff;
@@ -418,12 +419,15 @@ static int __mxt_read_reg(struct i2c_client *client,
 	xfer[1].len = len;
 	xfer[1].buf = val;
 
-	if (i2c_transfer(client->adapter, xfer, 2) != 2) {
+	for (i = 0; i < 10; i++) {
+		if (i2c_transfer(client->adapter, xfer, 2) == 2) {
+			return 0;
+		}
 		dev_err(&client->dev, "%s: i2c transfer failed\n", __func__);
-		return -EIO;
+		msleep(20);
 	}
 
-	return 0;
+	return -EIO;
 }
 
 static int mxt_read_reg(struct i2c_client *client, u16 reg, u8 *val)
