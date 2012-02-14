@@ -22,7 +22,6 @@
 #include <linux/phonet.h>
 #include <linux/pm_runtime.h>
 #include <linux/suspend.h>
-//#include <linux/modemctl.h>
 
 #include "svnet_sipc4.h"
 #include "svnet_pdp.h"
@@ -835,9 +834,6 @@ int usbsvn_probe(struct usb_interface *intf, const struct usb_device_id *id)
 	svn->usbdev = usbdev;
 	svn->driver_info = (unsigned long)id->driver_info;
 
-	/* FIXME: Does need this indeed? */
-	//usbdev->autosuspend_delay = msecs_to_jiffies(200);      /* 200ms */
-
 	if (!svn->driver_info) {
 		schedule_delayed_work(&svn->pm_runtime_work,
 			msecs_to_jiffies(10000));
@@ -1045,8 +1041,10 @@ static int _netdev_init(void)
 
 	netdev = alloc_netdev(sizeof(*svn) + sizeof(svn->urbs[0]) * rxq_size *
 			USBSVN_DEVNUM_MAX, ifname, usbsvn_setup);
-	if (!netdev)
+	if (!netdev) {
+		printk("SVNET OOM\n");
 		return -ENOMEM;
+	}
 
 	svn = netdev_priv(netdev);
 	netif_stop_queue(netdev);
@@ -1070,14 +1068,18 @@ static int _netdev_init(void)
 	svn->pdp.parent.flowctl = &svn->flow_suspend;
 
 	err = pdp_register(netdev, &svn->pdp);
-	if (err < 0)
+	if (err < 0) {
+		printk("SVNET: failed to register PDP\n");
 		goto netdev_out;
+	}
 
 	svn->dpm_suspending = 0;
 	svn->usbsvn_connected = 0;
 
 	svn->usbdev = NULL;
 	share_svn = svn;
+
+	usbsvn_request_resume();
 
 	return err;
 
