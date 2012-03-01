@@ -145,16 +145,20 @@ static struct s3c2410_uartcfg i9100_uartcfgs[] __initdata = {
  * voltage regulator
  *****************************************************************************/
 static struct regulator_consumer_supply ldo1_supply[] = {
-	REGULATOR_SUPPLY("vdd", "samsung-adc-v3"),
+	REGULATOR_SUPPLY("vdd", "samsung-adc-v3")
 };
 
 static struct regulator_consumer_supply ldo3_supply[] = {
 	REGULATOR_SUPPLY("pd_io", NULL),
 	REGULATOR_SUPPLY("vdd11", NULL), /* MIPI */
+	//REGULATOR_SUPPLY("vdd11", "s5p-mipi-csis.0"), /* MIPI */
+	REGULATOR_SUPPLY("vdd", "exynos4-hdmi"), /* HDMI */
+	REGULATOR_SUPPLY("vdd_pll", "exynos4-hdmi"), /* HDMI */
 };
 
 static struct regulator_consumer_supply ldo4_supply[] = {
 	REGULATOR_SUPPLY("vdd18", NULL), /* MIPI */
+	//REGULATOR_SUPPLY("vdd18", "s5p-mipi-csis.0"), /* MIPI */
 };
 
 static struct regulator_consumer_supply ldo5_supply[] = {
@@ -172,6 +176,7 @@ static struct regulator_consumer_supply ldo8_supply[] = {
 	REGULATOR_SUPPLY("vusb_3.3v", NULL),
 	REGULATOR_SUPPLY("vusb_d", NULL), /* Used by CPU */
 	REGULATOR_SUPPLY("vdac", NULL), /* Used by CPU */
+	REGULATOR_SUPPLY("vdd_osc", "exynos4-hdmi"), /* HDMI */
 };
 
 static struct regulator_consumer_supply ldo10_supply[] = {
