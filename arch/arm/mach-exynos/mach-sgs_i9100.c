@@ -2399,6 +2399,7 @@ static struct platform_device exynos4_bus_devfreq = {
  * platform devices
  ******************************************************************************/
 static struct platform_device *i9100_devices[] __initdata = {
+	&exynos4_device_sysmmu,
 	&s3c_device_i2c5,
 	&s3c_device_i2c0,
 	&emmc_fixed_voltage,
