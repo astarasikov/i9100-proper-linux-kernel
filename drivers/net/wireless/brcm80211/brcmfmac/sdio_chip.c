@@ -582,11 +582,6 @@ brcmf_sdio_chip_drivestrengthinit(struct brcmf_sdio_dev *sdiodev,
 		str_mask = 0x00003800;
 		str_shift = 11;
 		break;
-	case SDIOD_DRVSTR_KEY(BCM4330_CHIP_ID, 12):
-		str_tab = (struct sdiod_drive_str *)&sdiod_drvstr_tab4_1v8;
-		str_mask = 0x00003800;
-		str_shift = 11;
-		break;
 	default:
 		brcmf_dbg(ERROR, "No SDIO Drive strength init done for chip %s rev %d pmurev %d\n",
 			  brcmf_sdio_chip_name(ci->chip, chn, 8),
