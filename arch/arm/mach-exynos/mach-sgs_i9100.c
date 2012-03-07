@@ -477,9 +477,9 @@ static struct regulator_init_data ldo17_rev04_init_data = {
 	.constraints = {
 		.name = "VTF_2.8V",
 		.min_uV = 2800000,
-		.max_uV = 2800000,
+		.max_uV = 3300000,
 		.apply_uV = 1,
-		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
+		.valid_ops_mask = REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_VOLTAGE,
 		.state_mem = {
 			.disabled = 1,
 		}
