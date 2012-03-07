@@ -33,13 +33,13 @@
 #include <media/v4l2-mediabus.h>
 
 #include <asm/mach/arch.h>
+#include <asm/hardware/gic.h>
 #include <asm/mach-types.h>
 
 #include <video/platform_lcd.h>
 #include <plat/regs-serial.h>
 #include <plat/regs-srom.h>
 #include <plat/regs-fb-v4.h>
-#include <plat/exynos4.h>
 #include <plat/cpu.h>
 #include <plat/devs.h>
 #include <plat/sdhci.h>
@@ -58,6 +58,8 @@
 
 #include <mach/map.h>
 #include <mach/sgs_i9100.h>
+
+#include "common.h"
 
 enum fixed_regulator_id {
 	FIXED_REG_ID_MMC = 0,
@@ -2462,7 +2464,7 @@ static struct platform_device *i9100_devices[] __initdata = {
  * machine initialization
  ******************************************************************************/
 static void __init i9100_map_io(void) {
-	s5p_init_io(NULL, 0, S5P_VA_CHIPID);
+	exynos_init_io(NULL, 0);
 	s3c24xx_init_clocks(24000000);
 	s3c24xx_init_uarts(i9100_uartcfgs, ARRAY_SIZE(i9100_uartcfgs));
 }
@@ -2554,7 +2556,9 @@ MACHINE_START(SGS_I9100, "i9100")
 	.atag_offset	= 0x100,
 	.init_irq	= exynos4_init_irq,
 	.map_io		= i9100_map_io,
+	.handle_irq	= gic_handle_irq,
 	.init_machine	= i9100_machine_init,
 	.timer		= &exynos4_timer,
 	.reserve        = &i9100_reserve,
+	.restart	= exynos4_restart,
 MACHINE_END
