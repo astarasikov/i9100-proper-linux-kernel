@@ -195,7 +195,8 @@ static struct regulator_consumer_supply ldo12_supply[] = {
 };
 
 static struct regulator_consumer_supply ldo13_supply[] = {
-	REGULATOR_SUPPLY("vlcd_3.0v", NULL),
+	REGULATOR_SUPPLY("vdd3", "spi3.0"),
+	REGULATOR_SUPPLY("vci", "spi3.0"),
 };
 
 static struct regulator_consumer_supply ldo14_supply[] = {
@@ -1130,35 +1131,7 @@ static int ld9040_reset(struct lcd_device *ld) {
 	return 0;
 }
 
-static int ld9040_power(struct lcd_device *ld, int enable) {
-	struct regulator *regulator;
-	int rc = 0;
-
-	if (ld == NULL) {
-		printk(KERN_ERR "lcd device object is NULL.\n");
-		rc = -EINVAL;
-		goto fail;
-	}
-
-	regulator = regulator_get(NULL, "vlcd_3.0v");
-	if (IS_ERR(regulator)) {
-		rc = -ENODEV;
-		goto fail;
-	}
-	
-	if (enable) {
-		regulator_enable(regulator);
-	} else {
-		regulator_disable(regulator);
-	}
-	
-	regulator_put(regulator);
-fail:
-	return rc;
-}
-
 static struct lcd_platform_data ld9040_platform_data = {
-	.power_on	= ld9040_power,
 	.reset	= ld9040_reset,
 
 	.lcd_enabled	= 0,
