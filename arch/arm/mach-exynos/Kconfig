@@ -356,6 +356,7 @@ config	MACH_SGS_I9100
 	select S5P_DEV_FIMC3
 	select S5P_DEV_FIMD0
 	select S5P_DEV_G2D
+	select S5P_DEV_I2C_HDMIPHY
 	select S3C_DEV_HSMMC
 	select S3C_DEV_HSMMC2
 	select S3C_DEV_HSMMC3
@@ -364,6 +365,7 @@ config	MACH_SGS_I9100
 	select S3C_DEV_I2C5
 	select S3C_DEV_I2C6
 	select S5P_DEV_MFC
+	select S5P_DEV_TV
 	select S5P_DEV_USB_EHCI
 	select S5P_DEV_USB_HSDEVICE
 	select SAMSUNG_DEV_BACKLIGHT

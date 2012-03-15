@@ -840,6 +840,7 @@ static void i9100_muic_uart_callback(bool attached) {
 }
 
 static void i9100_muic_mhl_callback(bool attached) {
+	printk("%s: %d\n", __func__, attached);
 }
 
 static void i9100_muic_cardock_callback(bool attached) {
@@ -2355,6 +2356,29 @@ static void __init i9100_init_modem(void) {
 	i9100_modem_set_power(NULL, true);
 }
 /******************************************************************************
+ * HDMI
+ ******************************************************************************/
+static void __init i9100_init_hdmi(void) {
+	gpio_request(GPIO_MHL_SEL, "MHL Select");
+	s3c_gpio_cfgpin(GPIO_MHL_SEL, S3C_GPIO_OUTPUT);
+	s3c_gpio_setpull(GPIO_MHL_SEL, S3C_GPIO_PULL_NONE);
+	gpio_set_value(GPIO_MHL_SEL, 1);
+
+	gpio_request(GPIO_HDMI_EN, "HDMI EN");
+	s3c_gpio_cfgpin(GPIO_HDMI_EN, S3C_GPIO_OUTPUT);
+	s3c_gpio_setpull(GPIO_HDMI_EN, S3C_GPIO_PULL_NONE);
+	gpio_set_value(GPIO_HDMI_EN, 1);
+
+	gpio_request(GPIO_MHL_RST, "MHL Reset");
+	s3c_gpio_cfgpin(GPIO_MHL_RST, S3C_GPIO_OUTPUT);
+	s3c_gpio_setpull(GPIO_MHL_RST, S3C_GPIO_PULL_NONE);
+	gpio_set_value(GPIO_MHL_RST, 0);
+	mdelay(10);
+	gpio_set_value(GPIO_MHL_RST, 1);
+
+	s5p_i2c_hdmiphy_set_platdata(NULL);
+}
+/******************************************************************************
  * Sound
  ******************************************************************************/
 static struct i2c_board_info i2c6_devs[] __initdata = {
@@ -2398,9 +2422,12 @@ static struct platform_device *i9100_devices[] __initdata = {
 	&s5p_device_fimd0,
 	&s5p_device_mipi_csis0,
 	&s5p_device_g2d,
+	&s5p_device_hdmi,
+	&s5p_device_i2c_hdmiphy,
 	&s5p_device_mfc,
 	&s5p_device_mfc_l,
 	&s5p_device_mfc_r,
+	&s5p_device_mixer,
 	&samsung_asoc_dma,
 	&exynos4_bus_devfreq,
 	&exynos4_device_i2s0,
@@ -2512,6 +2539,7 @@ static void __init i9100_machine_init(void) {
 	i9100_init_bt();
 	i9100_init_gps();
 	i9100_init_proximity_sensor();
+	i9100_init_hdmi();
 	
 	platform_add_devices(i9100_devices, ARRAY_SIZE(i9100_devices));
 
@@ -2523,6 +2551,9 @@ static void __init i9100_machine_init(void) {
 	s5p_device_fimc2.dev.parent = &exynos4_device_pd[PD_CAM].dev;
 	s5p_device_fimc3.dev.parent = &exynos4_device_pd[PD_CAM].dev;
 	s5p_device_mipi_csis0.dev.parent = &exynos4_device_pd[PD_CAM].dev;
+	
+	s5p_device_hdmi.dev.parent = &exynos4_device_pd[PD_TV].dev;
+	s5p_device_mixer.dev.parent = &exynos4_device_pd[PD_TV].dev;
 }
 
 MACHINE_START(SGS_I9100, "i9100")
