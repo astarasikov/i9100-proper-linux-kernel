@@ -373,7 +373,7 @@ static int usbsvn_write(struct net_device *dev, struct sipc4_tx_data *tx_data)
 		goto exit;
 	}
 	usb_mark_last_busy(svn->usbdev);
-	if (dev_id == SIPC4_RAW)
+	//if (dev_id == SIPC4_RAW)
 
 exit:
 	return err;
