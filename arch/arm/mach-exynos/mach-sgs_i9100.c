@@ -2094,9 +2094,9 @@ struct platform_device i2c_gpio_prox = {
 };
 
 static struct i2c_board_info i2c_gpio_prox_devs[] __initdata = {
-	{
-		I2C_BOARD_INFO("cm3663", 0x20),
-	},
+//	{
+//		I2C_BOARD_INFO("cm3663", 0x20),
+//	},
 };
 
 static void __init i9100_init_proximity_sensor(void)
