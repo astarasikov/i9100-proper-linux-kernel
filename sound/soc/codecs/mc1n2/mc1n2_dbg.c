@@ -11,19 +11,21 @@ static void mc1n2_dump_reg_info(const void *pvPrm, UINT32 dPrm)
 	dbg_info("bAddress = 0x%02x\n", info->bAddress);
 }
 
+static char mc1n2_dump_str[2048];
+
 static void mc1n2_dump_array(const char *name,
 			     const unsigned char *data, size_t len)
 {
-	char str[2048], *p;
+	char *p;
 	int n = (len <= 256) ? len : 256;
 	int i;
 
-	p = str;
+	p = mc1n2_dump_str;
 	for (i = 0; i < n; i++) {
 		p += sprintf(p, "0x%02x ", data[i]);
 	}
 
-	dbg_info("%s[] = {%s}\n", name, str);
+	dbg_info("%s[] = {%s}\n", name, mc1n2_dump_str);
 }
 
 #define DEF_PATH(p) {offsetof(MCDRV_PATH_INFO, p), #p}
