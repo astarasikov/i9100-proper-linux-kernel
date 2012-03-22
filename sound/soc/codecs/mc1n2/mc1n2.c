@@ -29,7 +29,6 @@
 #include <linux/module.h>
 #include <linux/mutex.h>
 #include <linux/types.h>
-#include <sound/hwdep.h>
 #include <sound/initval.h>
 #include <sound/pcm.h>
 #include <sound/pcm_params.h>
@@ -122,7 +121,6 @@ struct mc1n2_data {
 	struct mutex mutex;
 	struct mc1n2_setup setup;
 	struct mc1n2_port_params port[IOPORT_NUM];
-	struct snd_hwdep *hwdep;
 	struct mc1n2_platform_data *pdata;
 	int clk_update;
 	MCDRV_PATH_INFO path_store;
@@ -594,7 +592,7 @@ static int mc1n2_i2s_hw_params(struct snd_pcm_substream *substream,
 		goto error;
 	}
 
-#ifdef CONFIG_SND_SAMSUNG_RP
+#if 1//def CONFIG_SND_SAMSUNG_RP
 	if ((dir == SNDRV_PCM_STREAM_PLAYBACK) && (get_port_id(dai->id) == 0)
 		&& (port->stream & (1 << dir)) && (rate == port->rate)) {
 		/* During ULP Audio, DAI should not be touched
@@ -656,7 +654,7 @@ static int mc1n2_hw_free(struct snd_pcm_substream *substream,
 		goto error;
 	}
 
-#ifdef CONFIG_SND_SAMSUNG_RP
+#if 1//def CONFIG_SND_SAMSUNG_RP
 	if ((dir == SNDRV_PCM_STREAM_PLAYBACK) && (get_port_id(dai->id) == 0)) {
 		/* Leave codec opened during ULP Audio */
 		err = 0;
@@ -1207,8 +1205,143 @@ static int write_reg_vol(struct snd_soc_codec *codec,
 	return 0;
 }
 
-static int mc1n2_hwdep_ioctl_set_path(struct snd_soc_codec *codec,
-				      void *info, unsigned int update);
+static int mc1n2_set_path(struct snd_soc_codec *codec,
+				      void *info, unsigned int update)
+{
+	struct mc1n2_data *mc1n2 = snd_soc_codec_get_drvdata(codec);
+	MCDRV_CHANNEL *ch;
+	int i, j;
+	MCDRV_PATH_INFO *path = (MCDRV_PATH_INFO *) info;
+
+	mutex_lock(&mc1n2->mutex);
+
+	/* preserve DIR settings */
+	for (i = 0; i < MC1N2_N_PATH_CHANNELS; i++) {
+		ch = (MCDRV_CHANNEL *)(info + mc1n2_path_channel_tbl[i]);
+#ifdef DIO0_DAI_ENABLE
+		switch ((ch->abSrcOnOff[3]) & 0x3) {
+		case 1:
+			mc1n2->port[0].dir[i] = 1;
+			break;
+		case 2:
+			mc1n2->port[0].dir[i] = 0;
+			break;
+		}
+#endif
+#ifdef DIO1_DAI_ENABLE
+		switch ((ch->abSrcOnOff[3] >> 2) & 0x3) {
+		case 1:
+			mc1n2->port[1].dir[i] = 1;
+			break;
+		case 2:
+			mc1n2->port[1].dir[i] = 0;
+			break;
+		}
+#endif
+#ifdef DIO2_DAI_ENABLE
+		switch ((ch->abSrcOnOff[3] >> 4) & 0x3) {
+		case 1:
+			mc1n2->port[2].dir[i] = 1;
+			break;
+		case 2:
+			mc1n2->port[2].dir[i] = 0;
+			break;
+		}
+#endif
+	}
+
+	/* preserve DIT settings */
+#ifdef DIO0_DAI_ENABLE
+	ch = (MCDRV_CHANNEL *)(info + mc1n2_path_channel_tbl[0]);
+	for (j = 0; j < SOURCE_BLOCK_NUM; j++) {
+		mc1n2->port[0].dit.abSrcOnOff[j] |=
+			ch->abSrcOnOff[j] & 0x55;
+		mc1n2->port[0].dit.abSrcOnOff[j] &=
+			~((ch->abSrcOnOff[j] & 0xaa) >> 1);
+	}
+#endif
+#ifdef DIO1_DAI_ENABLE
+	ch = (MCDRV_CHANNEL *)(info + mc1n2_path_channel_tbl[1]);
+	for (j = 0; j < SOURCE_BLOCK_NUM; j++) {
+		mc1n2->port[1].dit.abSrcOnOff[j] |=
+			ch->abSrcOnOff[j] & 0x55;
+		mc1n2->port[1].dit.abSrcOnOff[j] &=
+			~((ch->abSrcOnOff[j] & 0xaa) >> 1);
+	}
+#endif
+#ifdef DIO2_DAI_ENABLE
+	ch = (MCDRV_CHANNEL *)(info + mc1n2_path_channel_tbl[2]);
+	for (j = 0; j < SOURCE_BLOCK_NUM; j++) {
+		mc1n2->port[2].dit.abSrcOnOff[j] |=
+			ch->abSrcOnOff[j] & 0x55;
+		mc1n2->port[2].dit.abSrcOnOff[j] &=
+			~((ch->abSrcOnOff[j] & 0xaa) >> 1);
+	}
+#endif
+
+	/* modify path */
+	for (i = 0; i < MC1N2_N_PATH_CHANNELS; i++) {
+		ch = (MCDRV_CHANNEL *)(info + mc1n2_path_channel_tbl[i]);
+
+#ifdef DIO0_DAI_ENABLE
+		if (!mc1n2_is_in_playback(&mc1n2->port[0])) {
+			ch->abSrcOnOff[3] &= ~(0x3);
+		}
+#endif
+#ifdef DIO1_DAI_ENABLE
+		if (!mc1n2_is_in_playback(&mc1n2->port[1])) {
+			ch->abSrcOnOff[3] &= ~(0x3 << 2);
+		}
+#endif
+#ifdef DIO2_DAI_ENABLE
+		if (!mc1n2_is_in_playback(&mc1n2->port[2])) {
+			ch->abSrcOnOff[3] &= ~(0x3 << 4);
+		}
+#endif
+	}
+
+#ifdef DIO0_DAI_ENABLE
+	ch = (MCDRV_CHANNEL *)(info + mc1n2_path_channel_tbl[0]);
+	for (j = 0; j < SOURCE_BLOCK_NUM; j++) {
+		if (!mc1n2_is_in_capture(&mc1n2->port[0])) {
+			ch->abSrcOnOff[j] = 0;
+		}
+	}
+#endif
+#ifdef DIO1_DAI_ENABLE
+	ch = (MCDRV_CHANNEL *)(info + mc1n2_path_channel_tbl[1]);
+	for (j = 0; j < SOURCE_BLOCK_NUM; j++) {
+		if (!mc1n2_is_in_capture(&mc1n2->port[1])) {
+			ch->abSrcOnOff[j] = 0;
+		}
+	}
+#endif
+#ifdef DIO2_DAI_ENABLE
+	ch = (MCDRV_CHANNEL *)(info + mc1n2_path_channel_tbl[2]);
+	for (j = 0; j < SOURCE_BLOCK_NUM; j++) {
+		if (!mc1n2_is_in_capture(&mc1n2->port[2])) {
+			ch->abSrcOnOff[j] = 0;
+		}
+	}
+#endif
+
+	/* select mic path */
+	if ((path->asAdc0[0].abSrcOnOff[0] & MCDRV_SRC0_MIC1_OFF) && (path->asAdc0[1].abSrcOnOff[0] & MCDRV_SRC0_MIC1_OFF)) {
+		//audio_ctrl_mic_bias_gpio(mc1n2->pdata, MAIN_MIC, 0);
+	} else {
+		//audio_ctrl_mic_bias_gpio(mc1n2->pdata, MAIN_MIC, 1);
+		mdelay(mc1n2->delay_mic1in);
+	}
+
+	if ((path->asAdc0[0].abSrcOnOff[0] & MCDRV_SRC0_MIC3_OFF) && (path->asAdc0[1].abSrcOnOff[0] & MCDRV_SRC0_MIC3_OFF)) {
+		//audio_ctrl_mic_bias_gpio(mc1n2->pdata, SUB_MIC, 0);
+	} else
+		//audio_ctrl_mic_bias_gpio(mc1n2->pdata, SUB_MIC, 1);
+
+	mutex_unlock(&mc1n2->mutex);
+
+	return 0;
+}
 
 static int write_reg_path(struct snd_soc_codec *codec,
 			   unsigned int reg, unsigned int value)
@@ -2284,7 +2417,7 @@ static int write_reg_path(struct snd_soc_codec *codec,
 		break;
 	}
 
-	mc1n2_hwdep_ioctl_set_path(codec, &update, 0);
+	mc1n2_set_path(codec, &update, 0);
 	err = _McDrv_Ctrl(MCDRV_SET_PATH, &update, 0);
 
 	return err;
@@ -3100,590 +3233,6 @@ static int mc1n2_add_widgets(struct snd_soc_codec *codec)
 }
 
 /*
- * Hwdep interface
- */
-static int mc1n2_hwdep_open(struct snd_hwdep * hw, struct file *file)
-{
-	/* Nothing to do */
-	return 0;
-}
-
-static int mc1n2_hwdep_release(struct snd_hwdep *hw, struct file *file)
-{
-	/* Nothing to do */
-	return 0;
-}
-
-static int mc1n2_hwdep_map_error(int err)
-{
-	switch (err) {
-	case MCDRV_SUCCESS:
-		return 0;
-	case MCDRV_ERROR_ARGUMENT:
-		return -EINVAL;
-	case MCDRV_ERROR_STATE:
-		return -EBUSY;
-	case MCDRV_ERROR_TIMEOUT:
-		return -EIO;
-	default:
-		/* internal error */
-		return -EIO;
-	}
-}
-
-static int mc1n2_hwdep_ioctl_set_path(struct snd_soc_codec *codec,
-				      void *info, unsigned int update)
-{
-	struct mc1n2_data *mc1n2 = snd_soc_codec_get_drvdata(codec);
-	MCDRV_CHANNEL *ch;
-	int i, j;
-	MCDRV_PATH_INFO *path = (MCDRV_PATH_INFO *) info;
-
-	mutex_lock(&mc1n2->mutex);
-
-	/* preserve DIR settings */
-	for (i = 0; i < MC1N2_N_PATH_CHANNELS; i++) {
-		ch = (MCDRV_CHANNEL *)(info + mc1n2_path_channel_tbl[i]);
-#ifdef DIO0_DAI_ENABLE
-		switch ((ch->abSrcOnOff[3]) & 0x3) {
-		case 1:
-			mc1n2->port[0].dir[i] = 1;
-			break;
-		case 2:
-			mc1n2->port[0].dir[i] = 0;
-			break;
-		}
-#endif
-#ifdef DIO1_DAI_ENABLE
-		switch ((ch->abSrcOnOff[3] >> 2) & 0x3) {
-		case 1:
-			mc1n2->port[1].dir[i] = 1;
-			break;
-		case 2:
-			mc1n2->port[1].dir[i] = 0;
-			break;
-		}
-#endif
-#ifdef DIO2_DAI_ENABLE
-		switch ((ch->abSrcOnOff[3] >> 4) & 0x3) {
-		case 1:
-			mc1n2->port[2].dir[i] = 1;
-			break;
-		case 2:
-			mc1n2->port[2].dir[i] = 0;
-			break;
-		}
-#endif
-	}
-
-	/* preserve DIT settings */
-#ifdef DIO0_DAI_ENABLE
-	ch = (MCDRV_CHANNEL *)(info + mc1n2_path_channel_tbl[0]);
-	for (j = 0; j < SOURCE_BLOCK_NUM; j++) {
-		mc1n2->port[0].dit.abSrcOnOff[j] |=
-			ch->abSrcOnOff[j] & 0x55;
-		mc1n2->port[0].dit.abSrcOnOff[j] &=
-			~((ch->abSrcOnOff[j] & 0xaa) >> 1);
-	}
-#endif
-#ifdef DIO1_DAI_ENABLE
-	ch = (MCDRV_CHANNEL *)(info + mc1n2_path_channel_tbl[1]);
-	for (j = 0; j < SOURCE_BLOCK_NUM; j++) {
-		mc1n2->port[1].dit.abSrcOnOff[j] |=
-			ch->abSrcOnOff[j] & 0x55;
-		mc1n2->port[1].dit.abSrcOnOff[j] &=
-			~((ch->abSrcOnOff[j] & 0xaa) >> 1);
-	}
-#endif
-#ifdef DIO2_DAI_ENABLE
-	ch = (MCDRV_CHANNEL *)(info + mc1n2_path_channel_tbl[2]);
-	for (j = 0; j < SOURCE_BLOCK_NUM; j++) {
-		mc1n2->port[2].dit.abSrcOnOff[j] |=
-			ch->abSrcOnOff[j] & 0x55;
-		mc1n2->port[2].dit.abSrcOnOff[j] &=
-			~((ch->abSrcOnOff[j] & 0xaa) >> 1);
-	}
-#endif
-
-	/* modify path */
-	for (i = 0; i < MC1N2_N_PATH_CHANNELS; i++) {
-		ch = (MCDRV_CHANNEL *)(info + mc1n2_path_channel_tbl[i]);
-
-#ifdef DIO0_DAI_ENABLE
-		if (!mc1n2_is_in_playback(&mc1n2->port[0])) {
-			ch->abSrcOnOff[3] &= ~(0x3);
-		}
-#endif
-#ifdef DIO1_DAI_ENABLE
-		if (!mc1n2_is_in_playback(&mc1n2->port[1])) {
-			ch->abSrcOnOff[3] &= ~(0x3 << 2);
-		}
-#endif
-#ifdef DIO2_DAI_ENABLE
-		if (!mc1n2_is_in_playback(&mc1n2->port[2])) {
-			ch->abSrcOnOff[3] &= ~(0x3 << 4);
-		}
-#endif
-	}
-
-#ifdef DIO0_DAI_ENABLE
-	ch = (MCDRV_CHANNEL *)(info + mc1n2_path_channel_tbl[0]);
-	for (j = 0; j < SOURCE_BLOCK_NUM; j++) {
-		if (!mc1n2_is_in_capture(&mc1n2->port[0])) {
-			ch->abSrcOnOff[j] = 0;
-		}
-	}
-#endif
-#ifdef DIO1_DAI_ENABLE
-	ch = (MCDRV_CHANNEL *)(info + mc1n2_path_channel_tbl[1]);
-	for (j = 0; j < SOURCE_BLOCK_NUM; j++) {
-		if (!mc1n2_is_in_capture(&mc1n2->port[1])) {
-			ch->abSrcOnOff[j] = 0;
-		}
-	}
-#endif
-#ifdef DIO2_DAI_ENABLE
-	ch = (MCDRV_CHANNEL *)(info + mc1n2_path_channel_tbl[2]);
-	for (j = 0; j < SOURCE_BLOCK_NUM; j++) {
-		if (!mc1n2_is_in_capture(&mc1n2->port[2])) {
-			ch->abSrcOnOff[j] = 0;
-		}
-	}
-#endif
-
-	/* select mic path */
-	if ((path->asAdc0[0].abSrcOnOff[0] & MCDRV_SRC0_MIC1_OFF) && (path->asAdc0[1].abSrcOnOff[0] & MCDRV_SRC0_MIC1_OFF)) {
-		//audio_ctrl_mic_bias_gpio(mc1n2->pdata, MAIN_MIC, 0);
-	} else {
-		//audio_ctrl_mic_bias_gpio(mc1n2->pdata, MAIN_MIC, 1);
-		mdelay(mc1n2->delay_mic1in);
-	}
-
-	if ((path->asAdc0[0].abSrcOnOff[0] & MCDRV_SRC0_MIC3_OFF) && (path->asAdc0[1].abSrcOnOff[0] & MCDRV_SRC0_MIC3_OFF)) {
-		//audio_ctrl_mic_bias_gpio(mc1n2->pdata, SUB_MIC, 0);
-	} else
-		//audio_ctrl_mic_bias_gpio(mc1n2->pdata, SUB_MIC, 1);
-
-	mutex_unlock(&mc1n2->mutex);
-
-	return 0;
-}
-
-static int mc1n2_hwdep_ioctl_set_ae(struct snd_soc_codec *codec,
-				    void *info, unsigned int update)
-{
-	struct mc1n2_data *mc1n2 = snd_soc_codec_get_drvdata(codec);
-	UINT8 onoff = ((MCDRV_AE_INFO *)info)->bOnOff;
-	unsigned int mask = update & 0x0f;      /* bit mask for bOnOff */
-	int i;
-
-	struct mc1n2_ae_copy {
-		UINT32 flag;
-		size_t offset;
-		size_t size;
-	};
-
-	struct mc1n2_ae_copy tbl[] = {
-		{MCDRV_AEUPDATE_FLAG_BEX,
-		 offsetof(MCDRV_AE_INFO, abBex), BEX_PARAM_SIZE},
-		{MCDRV_AEUPDATE_FLAG_WIDE,
-		 offsetof(MCDRV_AE_INFO, abWide), WIDE_PARAM_SIZE},
-		{MCDRV_AEUPDATE_FLAG_DRC,
-		 offsetof(MCDRV_AE_INFO, abDrc), DRC_PARAM_SIZE},
-		{MCDRV_AEUPDATE_FLAG_EQ5,
-		 offsetof(MCDRV_AE_INFO, abEq5), EQ5_PARAM_SIZE},
-		{MCDRV_AEUPDATE_FLAG_EQ3,
-		 offsetof(MCDRV_AE_INFO, abEq3), EQ3_PARAM_SIZE},
-	};
-
-	mutex_lock(&mc1n2->mutex);
-
-	mc1n2->ae_store.bOnOff = (mc1n2->ae_store.bOnOff & ~mask) | onoff;
-
-	for (i = 0; i < sizeof(tbl)/sizeof(struct mc1n2_ae_copy); i++) {
-		if (update & tbl[i].flag) {
-			memcpy((void *)&mc1n2->ae_store + tbl[i].offset,
-			       info + tbl[i].offset, tbl[i].size);
-		}
-	}
-
-	mutex_unlock(&mc1n2->mutex);
-
-	return 0;
-}
-
-struct mc1n2_hwdep_func {
-	int cmd;
-	size_t size;
-	int (*callback)(struct snd_soc_codec *, void *, unsigned int);
-};
-
-struct mc1n2_hwdep_func mc1n2_hwdep_func_map[] = {
-	{0, 0, NULL},                                         /* INIT */
-	{0, 0, NULL},                                         /* TERM */
-	{MC1N2_IOCTL_NR_BOTH, sizeof(MCDRV_REG_INFO), NULL},  /* READ_REG */
-	{0, 0, NULL},                                         /* WRITE_REG */
-	{MC1N2_IOCTL_NR_GET, sizeof(MCDRV_PATH_INFO), NULL},  /* GET_PATH */
-	{MC1N2_IOCTL_NR_SET, sizeof(MCDRV_PATH_INFO),
-	 mc1n2_hwdep_ioctl_set_path},                         /* SET_PATH */
-	{0, 0, NULL},                                         /* GET_VOLUME */
-	{0, 0, NULL},                                         /* SET_VOLUME */
-	{MC1N2_IOCTL_NR_GET, sizeof(MCDRV_DIO_INFO), NULL},   /* GET_DIGITALIO */
-	{MC1N2_IOCTL_NR_SET, sizeof(MCDRV_DIO_INFO), NULL},   /* SET_DIGITALIO */
-	{MC1N2_IOCTL_NR_GET, sizeof(MCDRV_DAC_INFO), NULL},   /* GET_DAC */
-	{MC1N2_IOCTL_NR_SET, sizeof(MCDRV_DAC_INFO), NULL},   /* SET_DAC */
-	{MC1N2_IOCTL_NR_GET, sizeof(MCDRV_ADC_INFO), NULL},   /* GET_ADC */
-	{MC1N2_IOCTL_NR_SET, sizeof(MCDRV_ADC_INFO), NULL},   /* SET_ADC */
-	{MC1N2_IOCTL_NR_GET, sizeof(MCDRV_SP_INFO), NULL},    /* GET_SP */
-	{MC1N2_IOCTL_NR_SET, sizeof(MCDRV_SP_INFO), NULL},    /* SET_SP */
-	{MC1N2_IOCTL_NR_GET, sizeof(MCDRV_DNG_INFO), NULL},   /* GET_DNG */
-	{MC1N2_IOCTL_NR_SET, sizeof(MCDRV_DNG_INFO), NULL},   /* SET_DNG */
-	{MC1N2_IOCTL_NR_SET, sizeof(MCDRV_AE_INFO),
-	 mc1n2_hwdep_ioctl_set_ae},                           /* SET_AE */
-	{0, 0, NULL},                                         /* SET_AE_EX */
-	{0, 0, NULL},                                         /* SET_CDSP */
-	{0, 0, NULL},                                         /* GET_CDSP_PARAM */
-	{0, 0, NULL},                                         /* SET_CDSP_PARAM */
-	{0, 0, NULL},                                         /* REG_CDSP_CB */
-	{MC1N2_IOCTL_NR_GET, sizeof(MCDRV_PDM_INFO), NULL},   /* GET PDM */
-	{MC1N2_IOCTL_NR_SET, sizeof(MCDRV_PDM_INFO), NULL},   /* SET_PDM */
-	{0, 0, NULL},                                         /* SET_DTMF */
-	{0, 0, NULL},                                         /* CONFIG_GP */
-	{0, 0, NULL},                                         /* MASK_GP */
-	{0, 0, NULL},                                         /* GETSET_GP */
-	{0, 0, NULL},                                         /* GET_PEAK */
-	{0, 0, NULL},                                         /* IRQ */
-	{0, 0, NULL},                                         /* UPDATE_CLOCK */
-	{MC1N2_IOCTL_NR_SET, sizeof(MCDRV_CLKSW_INFO), NULL}, /* SWITCH_CLOCK */
-	{MC1N2_IOCTL_NR_GET, sizeof(MCDRV_SYSEQ_INFO), NULL}, /* GET SYSEQ */
-	{MC1N2_IOCTL_NR_SET, sizeof(MCDRV_SYSEQ_INFO), NULL}, /* SET_SYSEQ */
-};
-#define MC1N2_HWDEP_N_FUNC_MAP \
-	(sizeof(mc1n2_hwdep_func_map)/sizeof(struct mc1n2_hwdep_func))
-
-static int mc1n2_hwdep_ioctl_get_ctrl(struct snd_soc_codec *codec,
-				      struct mc1n2_ctrl_args *args)
-{
-	struct mc1n2_hwdep_func *func = &mc1n2_hwdep_func_map[args->dCmd];
-	void *info;
-	int err;
-
-	if (func->cmd != MC1N2_IOCTL_NR_GET) {
-		return -EINVAL;
-	}
-
-	if (!access_ok(VERIFY_WRITE, args->pvPrm, func->size)) {
-		return -EFAULT;
-	}
-
-	if (!(info = kzalloc(func->size, GFP_KERNEL))) {
-		return -ENOMEM;
-	}
-
-	err = _McDrv_Ctrl(args->dCmd, info, args->dPrm);
-	err = mc1n2_hwdep_map_error(err);
-	if (err < 0) {
-		goto error;
-	}
-
-	if (func->callback) {                   /* call post-process */
-		func->callback(codec, info, args->dPrm);
-	}
-
-	if (copy_to_user(args->pvPrm, info, func->size) != 0) {
-		err = -EFAULT;
-		goto error;
-	}
-
-error:
-	kfree(info);
-	return err;
-}
-
-static int mc1n2_hwdep_ioctl_set_ctrl(struct snd_soc_codec *codec,
-				      struct mc1n2_ctrl_args *args)
-{
-	struct mc1n2_hwdep_func *func = &mc1n2_hwdep_func_map[args->dCmd];
-	void *info;
-	int err;
-
-	if (func->cmd != MC1N2_IOCTL_NR_SET) {
-		return -EINVAL;
-	}
-
-	if (!access_ok(VERIFY_READ, args->pvPrm, func->size)) {
-		return -EFAULT;
-	}
-
-	if (!(info = kzalloc(func->size, GFP_KERNEL))) {
-		return -ENOMEM;
-	}
-
-	if (copy_from_user(info, args->pvPrm, func->size) != 0) {
-		kfree(info);
-		return -EFAULT;
-	}
-
-	if (func->callback) {                   /* call pre-process */
-		func->callback(codec, info, args->dPrm);
-	}
-
-	if (args->dCmd == MCDRV_SET_DIGITALIO) {
-#ifdef DIO0_DAI_ENABLE
-		args->dPrm &= ~(MCDRV_DIO0_COM_UPDATE_FLAG | MCDRV_DIO0_DIR_UPDATE_FLAG | MCDRV_DIO0_DIT_UPDATE_FLAG);
-#endif
-#ifdef DIO1_DAI_ENABLE
-		args->dPrm &= ~(MCDRV_DIO1_COM_UPDATE_FLAG | MCDRV_DIO1_DIR_UPDATE_FLAG | MCDRV_DIO1_DIT_UPDATE_FLAG);
-#endif
-#ifdef DIO2_DAI_ENABLE
-		args->dPrm &= ~(MCDRV_DIO2_COM_UPDATE_FLAG | MCDRV_DIO2_DIR_UPDATE_FLAG | MCDRV_DIO2_DIT_UPDATE_FLAG);
-#endif
-	}
-
-	err = _McDrv_Ctrl(args->dCmd, info, args->dPrm);
-
-	kfree(info);
-
-	return mc1n2_hwdep_map_error(err);
-}
-
-static int mc1n2_hwdep_ioctl_read_reg(struct mc1n2_ctrl_args *args)
-{
-	struct mc1n2_hwdep_func *func = &mc1n2_hwdep_func_map[args->dCmd];
-	MCDRV_REG_INFO info;
-	int err;
-
-	if (func->cmd != MC1N2_IOCTL_NR_BOTH) {
-		return -EINVAL;
-	}
-
-	if (!access_ok(VERIFY_WRITE, args->pvPrm, sizeof(MCDRV_REG_INFO))) {
-		return -EFAULT;
-	}
-
-	if (copy_from_user(&info, args->pvPrm, sizeof(MCDRV_REG_INFO)) != 0) {
-		return -EFAULT;
-	}
-
-	err = _McDrv_Ctrl(args->dCmd, &info, args->dPrm);
-	if (err != MCDRV_SUCCESS) {
-		return mc1n2_hwdep_map_error(err);
-	}
-
-	if (copy_to_user(args->pvPrm, &info, sizeof(MCDRV_REG_INFO)) != 0) {
-		return -EFAULT;
-	}
-
-	return 0;
-}
-
-static int mc1n2_hwdep_ioctl_notify(struct snd_soc_codec *codec,
-				      struct mc1n2_ctrl_args *args)
-{
-	MCDRV_PATH_INFO path;
-
-	struct mc1n2_data *mc1n2 = snd_soc_codec_get_drvdata(codec);
-
-	switch (args->dCmd) {
-	case MCDRV_NOTIFY_CALL_START:
-	case MCDRV_NOTIFY_2MIC_CALL_START:
-		mc1n2_current_mode |= MC1N2_MODE_CALL_ON;
-		//mc1n2->pdata->set_adc_power_contraints(0);
-		break;
-	case MCDRV_NOTIFY_CALL_STOP:
-		mc1n2_current_mode &= ~MC1N2_MODE_CALL_ON;
-		//mc1n2->pdata->set_adc_power_contraints(1);
-		break;
-	case MCDRV_NOTIFY_MEDIA_PLAY_START:
-		break;
-	case MCDRV_NOTIFY_MEDIA_PLAY_STOP:
-		break;
-	case MCDRV_NOTIFY_FM_PLAY_START:
-		mc1n2_current_mode |= MC1N2_MODE_FM_ON;
-		break;
-	case MCDRV_NOTIFY_FM_PLAY_STOP:
-		mc1n2_current_mode &= ~MC1N2_MODE_FM_ON;
-		break;
-	case MCDRV_NOTIFY_BT_SCO_ENABLE:
-		break;
-	case MCDRV_NOTIFY_BT_SCO_DISABLE:
-		break;
-	case MCDRV_NOTIFY_VOICE_REC_START:
-		mc1n2->delay_mic1in = MC1N2_WAITTIME_MICIN;
-		break;
-	case MCDRV_NOTIFY_VOICE_REC_STOP:
-		mc1n2->delay_mic1in = 0;
-		break;
-	case MCDRV_NOTIFY_HDMI_START:
-		if (mc1n2->hdmicount == 0) {
-			memset(&path, 0, sizeof(path));
-			path.asDit0[0].abSrcOnOff[3] = MCDRV_SRC3_DIR0_OFF;
-			path.asDit1[0].abSrcOnOff[3] = MCDRV_SRC3_DIR0_OFF;
-			path.asDit2[0].abSrcOnOff[3] = MCDRV_SRC3_DIR0_OFF;
-			path.asDac[0].abSrcOnOff[3] = MCDRV_SRC3_DIR0_OFF;
-			path.asDac[1].abSrcOnOff[3] = MCDRV_SRC3_DIR0_OFF;
-			path.asAe[0].abSrcOnOff[3] = MCDRV_SRC3_DIR0_OFF;
-			path.asMix[0].abSrcOnOff[3] = MCDRV_SRC3_DIR0_OFF;
-			_McDrv_Ctrl(MCDRV_SET_PATH, &path, 0);
-		}
-
-		(mc1n2->hdmicount)++;
-		break;
-	case MCDRV_NOTIFY_HDMI_STOP:
-		if (mc1n2->hdmicount != 0) {
-			if (mc1n2->hdmicount == 1) {
-				memset(&path, 0, sizeof(path));
-				path.asDit0[0].abSrcOnOff[3] = MCDRV_SRC3_DIR0_OFF;
-				path.asDit1[0].abSrcOnOff[3] = MCDRV_SRC3_DIR0_OFF;
-				path.asDit2[0].abSrcOnOff[3] = MCDRV_SRC3_DIR0_OFF;
-				path.asDac[0].abSrcOnOff[3] = MCDRV_SRC3_DIR0_OFF;
-				path.asDac[1].abSrcOnOff[3] = MCDRV_SRC3_DIR0_OFF;
-				path.asAe[0].abSrcOnOff[3] = MCDRV_SRC3_DIR0_OFF;
-				path.asMix[0].abSrcOnOff[3] = MCDRV_SRC3_DIR0_OFF;
-				_McDrv_Ctrl(MCDRV_SET_PATH, &path, 0);
-			}
-
-			(mc1n2->hdmicount)--;
-		}
-		break;
-	case MCDRV_NOTIFY_RECOVER:
-		{
-			int err, i;
-			SINT16 *vol = (SINT16 *)&mc1n2->vol_store;
-
-			mutex_lock(&mc1n2->mutex);
-
-			/* store parameters */
-			for (i = 0; i < MC1N2_N_INFO_STORE; i++) {
-				struct mc1n2_info_store *store = &mc1n2_info_store_tbl[i];
-				if (store->get) {
-					err = _McDrv_Ctrl(store->get, (void *)mc1n2 + store->offset, 0);
-					if (err != MCDRV_SUCCESS) {
-						dev_err(codec->dev,
-							"%d: Error in MCDRV_GET_xxx\n", err);
-						err = -EIO;
-						goto error_recover;
-					} else {
-						err = 0;
-					}
-				}
-			}
-
-			err = _McDrv_Ctrl(MCDRV_TERM, NULL, 0);
-			if (err != MCDRV_SUCCESS) {
-				dev_err(codec->dev, "%d: Error in MCDRV_TERM\n", err);
-				err = -EIO;
-			} else {
-				err = 0;
-			}
-
-			err = _McDrv_Ctrl(MCDRV_INIT, &mc1n2->setup.init, 0);
-			if (err != MCDRV_SUCCESS) {
-				dev_err(codec->dev, "%d: Error in MCDRV_INIT\n", err);
-				err = -EIO;
-				goto error_recover;
-			} else {
-				err = 0;
-			}
-
-			/* restore parameters */
-			for (i = 0; i < sizeof(MCDRV_VOL_INFO)/sizeof(SINT16); i++, vol++) {
-				*vol |= 0x0001;
-			}
-
-			for (i = 0; i < MC1N2_N_INFO_STORE; i++) {
-				struct mc1n2_info_store *store = &mc1n2_info_store_tbl[i];
-				if (store->set) {
-					err = _McDrv_Ctrl(store->set, (void *)mc1n2 + store->offset,
-							  store->flags);
-					if (err != MCDRV_SUCCESS) {
-						dev_err(codec->dev,
-							"%d: Error in MCDRV_SET_xxx\n", err);
-						err = -EIO;
-						goto error_recover;
-					} else {
-						err = 0;
-					}
-				}
-			}
-
-error_recover:
-			mutex_unlock(&mc1n2->mutex);
-			return err;
-			break;
-		}
-	}
-
-	return 0;
-}
-
-static int mc1n2_hwdep_ioctl(struct snd_hwdep *hw, struct file *file,
-			     unsigned int cmd, unsigned long arg)
-{
-	struct mc1n2_ctrl_args ctrl_args;
-	struct snd_soc_codec *codec = hw->private_data;
-	int err;
-
-	if (!access_ok(VERIFY_READ, (struct mc1n2_ctrl_args *)arg,
-		       sizeof(struct mc1n2_ctrl_args))) {
-		return -EFAULT;
-	}
-
-	if (copy_from_user(&ctrl_args, (struct mc1n2_ctrl_args *)arg,
-			   sizeof(struct mc1n2_ctrl_args)) != 0) {
-		return -EFAULT;
-	}
-
-	if (cmd == MC1N2_IOCTL_NOTIFY) {
-		return mc1n2_hwdep_ioctl_notify(codec, &ctrl_args);
-	}
-
-	if (ctrl_args.dCmd >= MC1N2_HWDEP_N_FUNC_MAP) {
-		return -EINVAL;
-	}
-
-	switch (cmd) {
-	case MC1N2_IOCTL_GET_CTRL:
-		err = mc1n2_hwdep_ioctl_get_ctrl(codec, &ctrl_args);
-		break;
-	case MC1N2_IOCTL_SET_CTRL:
-		err = mc1n2_hwdep_ioctl_set_ctrl(codec, &ctrl_args);
-		break;
-	case MC1N2_IOCTL_READ_REG:
-		err = mc1n2_hwdep_ioctl_read_reg(&ctrl_args);
-		break;
-	default:
-		err = -EINVAL;
-	}
-
-	return err;
-}
-
-static int mc1n2_add_hwdep(struct snd_soc_codec *codec)
-{
-	struct snd_hwdep *hw;
-	struct mc1n2_data *mc1n2 = snd_soc_codec_get_drvdata(codec);
-	int err;
-
-	err = snd_hwdep_new((struct snd_card *)codec->card->snd_card,
-						MC1N2_HWDEP_ID, 0, &hw);
-	if (err < 0) {
-		return err;
-	}
-
-	hw->iface = 1;//SNDRV_HWDEP_IFACE_MC1N2;
-	hw->private_data = codec;
-	hw->ops.open = mc1n2_hwdep_open;
-	hw->ops.release = mc1n2_hwdep_release;
-	hw->ops.ioctl = mc1n2_hwdep_ioctl;
-	hw->exclusive = 1;
-	strcpy(hw->name, MC1N2_HWDEP_ID);
-	mc1n2->hwdep = hw;
-
-	return 0;
-}
-
-/*
  * Codec device
  */
 static int mc1n2_probe(struct snd_soc_codec *codec)
@@ -3729,13 +3278,6 @@ static int mc1n2_probe(struct snd_soc_codec *codec)
 	if (err < 0) {
 		dev_err(dev, "%d: Error in mc1n2_add_widgets\n", err);
 		goto error_add_ctl;
-	}
-
-	/* hwdep */
-	err = mc1n2_add_hwdep(codec);
-	if (err < 0) {
-		dev_err(dev, "%d: Error in mc1n2_add_hwdep\n", err);
-		goto error_add_hwdep;
 	}
 
 #if (defined ALSA_VER_1_0_19) || (defined ALSA_VER_1_0_21)
@@ -3803,7 +3345,6 @@ error_set_mode:
 #if (defined ALSA_VER_1_0_19) || (defined ALSA_VER_1_0_21)
 error_init_card:
 #endif
-error_add_hwdep:
 error_add_ctl:
 	_McDrv_Ctrl(MCDRV_TERM, NULL, 0);
 error_init_hw:
