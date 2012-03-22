@@ -2142,10 +2142,6 @@ static struct i2c_board_info i2c6_devs[] __initdata = {
 		I2C_BOARD_INFO("ymu823", 0x3a),
 	},
 };
-/******************************************************************************
- * modem
- ******************************************************************************/
-extern struct platform_device i9100_modemctl;
 
 /******************************************************************************
  * DEVFREQ controlling memory/bus
@@ -2216,9 +2212,7 @@ static struct platform_device *i9100_devices[] __initdata = {
 	&i9100_device_bt,
 
 	&i9100_keyled,
-	&i9100_modemctl,
 };
-
 
 /******************************************************************************
  * machine initialization
