@@ -212,3 +212,11 @@ config SND_SOC_LITTLEMILL
 	select SND_SAMSUNG_I2S
 	select MFD_WM8994
 	select SND_SOC_WM8994
+
+config SND_SOC_SGS_I9100_MC1N2
+	tristate "SoC I2S Audio support for MC1N2 on I9100"
+	depends on SND_SOC_SAMSUNG && MACH_SGS_I9100
+	select SND_SOC_MC1N2
+	select SND_SAMSUNG_I2S
+	help
+	  Say Y if you want to add support for SoC audio on I9100.

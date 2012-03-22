@@ -2139,7 +2139,7 @@ static void __init i9100_init_hdmi(void) {
  ******************************************************************************/
 static struct i2c_board_info i2c6_devs[] __initdata = {
 	{
-		I2C_BOARD_INFO("ymu823", 0x3a),
+		I2C_BOARD_INFO("mc1n2", 0x3a),
 	},
 };
 
