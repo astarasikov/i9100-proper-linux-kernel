@@ -2292,7 +2292,7 @@ static void __init i9100_machine_init(void) {
 	i9100_init_bt();
 	i9100_init_gps();
 	i9100_init_proximity_sensor();
-	i9100_init_hdmi();
+	//i9100_init_hdmi();
 	
 	platform_add_devices(i9100_devices, ARRAY_SIZE(i9100_devices));
 
