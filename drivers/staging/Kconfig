@@ -134,6 +134,6 @@ source "drivers/staging/android/Kconfig"
 
 source "drivers/staging/alc5625/Kconfig"
 
-source "drivers/staging/samsung_modem/Kconfig"
+source "drivers/staging/samsung_modem_new/Kconfig"
 
 endif # STAGING
