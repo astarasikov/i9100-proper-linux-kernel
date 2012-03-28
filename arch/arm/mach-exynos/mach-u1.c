@@ -19,6 +19,8 @@
 #include <linux/io.h>
 #include <linux/i2c.h>
 #include <linux/i2c-gpio.h>
+#include <linux/i2c/mcs.h>
+#include <linux/i2c/atmel_mxt_ts.h>
 #include <linux/input.h>
 #include <linux/switch.h>
 #include <linux/spi/spi.h>
@@ -40,11 +42,6 @@
 #include <linux/pn544.h>
 #ifdef CONFIG_SND_SOC_U1_MC1N2
 #include <linux/mfd/mc1n2_pdata.h>
-#endif
-#if defined(CONFIG_TOUCHSCREEN_ATMEL_MXT540E)
-#include <linux/i2c/mxt540e.h>
-#else
-#include <linux/i2c/mxt224_u1.h>
 #endif
 #include <linux/memblock.h>
 #include <linux/power_supply.h>
@@ -182,12 +179,6 @@
 #include <linux/host_notify.h>
 #endif
 
-#ifdef CONFIG_EPEN_WACOM_G5SP
-#include <linux/wacom_i2c.h>
-static struct wacom_g5_callbacks *wacom_callbacks;
-#endif /* CONFIG_EPEN_WACOM_G5SP */
-
-
 #if defined(CONFIG_TDMB) || defined(CONFIG_TDMB_MODULE)
 #include <mach/tdmb_pdata.h>
 #endif
@@ -195,6 +186,19 @@ static struct wacom_g5_callbacks *wacom_callbacks;
 #ifdef CONFIG_LEDS_MAX8997
 #include <linux/leds-max8997.h>
 #endif
+
+enum i2c_bus_ids {
+	I2C_GPIO_BUS_GAUGE = 9,
+	I2C_GPIO_BUS_USB = 10,
+	I2C_GPIO_BUS_PROX = 11,
+	I2C_GPIO_BUS_VT_CAM = 12,
+	I2C_GPIO_BUS_TOUCHKEY = 13,
+	I2C_GPIO_BUS_NFC = 14,
+	I2C_GPIO_BUS_MHL = 15,
+	I2C_GPIO_BUS_FM = 16,
+	I2C_GPIO_BUS_DBT = 17,
+	I2C_GPIO_BUS_SMB329 = 19,
+};
 
 /* Following are default values for UCON, ULCON and UFCON UART registers */
 #define SMDKC210_UCON_DEFAULT	(S3C2410_UCON_TXILEVEL |	\
@@ -573,7 +577,7 @@ static struct i2c_gpio_platform_data gpio_i2c_data15 = {
 
 struct platform_device s3c_device_i2c15 = {
 	.name = "i2c-gpio",
-	.id = I2C_BUS_ID_MHL,
+	.id = I2C_GPIO_BUS_MHL,
 	.dev = {
 		.platform_data = &gpio_i2c_data15,
 	}
@@ -2155,7 +2159,7 @@ static struct regulator_consumer_supply ldo10_supply[] = {
 #endif
 
 static struct regulator_consumer_supply ldo11_supply[] = {
-	REGULATOR_SUPPLY("touch", NULL),
+	REGULATOR_SUPPLY("touchkey", NULL),
 };
 
 static struct regulator_consumer_supply ldo12_supply[] = {
@@ -3615,7 +3619,7 @@ static struct i2c_gpio_platform_data gpio_i2c_data19 = {
 
 static struct platform_device s3c_device_i2c19 = {
 	.name = "i2c-gpio",
-	.id = 19,
+	.id = I2C_GPIO_BUS_SMB329,
 	.dev.platform_data = &gpio_i2c_data19,
 };
 
@@ -3897,726 +3901,6 @@ static struct platform_device sec_device_jack = {
 };
 #endif
 
-void tsp_register_callback(void *function)
-{
-	charging_cbs.tsp_set_charging_cable = function;
-}
-
-void tsp_read_ta_status(void *ta_status)
-{
-	*(bool *)ta_status = is_cable_attached;
-}
-#ifdef CONFIG_TOUCHSCREEN_ATMEL_MXT224_U1
-static void mxt224_power_on(void)
-{
-	s3c_gpio_cfgpin(GPIO_TSP_LDO_ON, S3C_GPIO_OUTPUT);
-	s3c_gpio_setpull(GPIO_TSP_LDO_ON, S3C_GPIO_PULL_NONE);
-	gpio_set_value(GPIO_TSP_LDO_ON, 1);
-	mdelay(70);
-	s3c_gpio_setpull(GPIO_TSP_INT, S3C_GPIO_PULL_NONE);
-	s3c_gpio_cfgpin(GPIO_TSP_INT, S3C_GPIO_SFN(0xf));
-	mdelay(40);
-	/* printk("mxt224_power_on is finished\n"); */
-}
-
-static void mxt224_power_off(void)
-{
-	s3c_gpio_cfgpin(GPIO_TSP_INT, S3C_GPIO_INPUT);
-	s3c_gpio_setpull(GPIO_TSP_INT, S3C_GPIO_PULL_DOWN);
-
-	s3c_gpio_cfgpin(GPIO_TSP_LDO_ON, S3C_GPIO_OUTPUT);
-	s3c_gpio_setpull(GPIO_TSP_LDO_ON, S3C_GPIO_PULL_NONE);
-	gpio_set_value(GPIO_TSP_LDO_ON, 0);
-	/* printk("mxt224_power_off is finished\n"); */
-}
-
-/*
-  Configuration for MXT224
-*/
-#define MXT224_THRESHOLD_BATT		40
-#define MXT224_THRESHOLD_BATT_INIT		55
-#define MXT224_THRESHOLD_CHRG		70
-#define MXT224_NOISE_THRESHOLD_BATT		30
-#define MXT224_NOISE_THRESHOLD_CHRG		40
-#define MXT224_MOVFILTER_BATT		47
-#define MXT224_MOVFILTER_CHRG		47
-#define MXT224_ATCHCALST		4
-#define MXT224_ATCHCALTHR		35
-
-static u8 t7_config[] = { GEN_POWERCONFIG_T7,
-	48,			/* IDLEACQINT */
-	255,			/* ACTVACQINT */
-	25			/* ACTV2IDLETO: 25 * 200ms = 5s */
-};
-
-static u8 t8_config[] = { GEN_ACQUISITIONCONFIG_T8,
-	10, 0, 5, 1, 0, 0, MXT224_ATCHCALST, MXT224_ATCHCALTHR
-};				/*byte 3: 0 */
-
-static u8 t9_config[] = { TOUCH_MULTITOUCHSCREEN_T9,
-	131, 0, 0, 19, 11, 0, 32, MXT224_THRESHOLD_BATT, 2, 1,
-	0,
-	15,			/* MOVHYSTI */
-	1, MXT224_MOVFILTER_BATT, MXT224_MAX_MT_FINGERS, 5, 40, 10, 31, 3,
-	223, 1, 0, 0, 0, 0, 143, 55, 143, 90, 18
-};
-
-static u8 t18_config[] = { SPT_COMCONFIG_T18,
-	0, 1
-};
-
-static u8 t20_config[] = { PROCI_GRIPFACESUPPRESSION_T20,
-	7, 0, 0, 0, 0, 0, 0, 30, 20, 4, 15, 10
-};
-
-static u8 t22_config[] = { PROCG_NOISESUPPRESSION_T22,
-	143, 0, 0, 0, 0, 0, 0, 3, MXT224_NOISE_THRESHOLD_BATT, 0,
-	0, 29, 34, 39, 49, 58, 3
-};
-
-static u8 t28_config[] = { SPT_CTECONFIG_T28,
-			   0, 0, 3, 16, 19, 60
-};
-static u8 end_config[] = { RESERVED_T255 };
-
-static const u8 *mxt224_config[] = {
-	t7_config,
-	t8_config,
-	t9_config,
-	t18_config,
-	t20_config,
-	t22_config,
-	t28_config,
-	end_config,
-};
-
-/*
-  Configuration for MXT224-E
-*/
-#define MXT224E_THRESHOLD_BATT		50
-#define MXT224E_THRESHOLD_CHRG		40
-#define MXT224E_CALCFG_BATT		0x42
-#define MXT224E_CALCFG_CHRG		0x52
-#define MXT224E_ATCHFRCCALTHR_NORMAL		40
-#define MXT224E_ATCHFRCCALRATIO_NORMAL		55
-#define MXT224E_GHRGTIME_BATT		27
-#define MXT224E_GHRGTIME_CHRG		22
-#define MXT224E_ATCHCALST		4
-#define MXT224E_ATCHCALTHR		35
-#define MXT224E_BLEN_BATT		32
-#define MXT224E_BLEN_CHRG		16
-#define MXT224E_MOVFILTER_BATT		46
-#define MXT224E_MOVFILTER_CHRG		46
-#define MXT224E_ACTVSYNCSPERX_NORMAL		32
-#define MXT224E_NEXTTCHDI_NORMAL		0
-
-#if defined(CONFIG_TARGET_LOCALE_NAATT)
-static u8 t7_config_e[] = { GEN_POWERCONFIG_T7,
-	48, 255, 25
-};
-
-static u8 t8_config_e[] = { GEN_ACQUISITIONCONFIG_T8,
-	27, 0, 5, 1, 0, 0, 8, 8, 8, 180
-};
-
-/* MXT224E_0V5_CONFIG */
-/* NEXTTCHDI added */
-static u8 t9_config_e[] = { TOUCH_MULTITOUCHSCREEN_T9,
-	139, 0, 0, 19, 11, 0, 32, 50, 2, 1,
-	10, 3, 1, 11, MXT224_MAX_MT_FINGERS, 5, 40, 10, 31, 3,
-	223, 1, 10, 10, 10, 10, 143, 40, 143, 80,
-	18, 15, 50, 50, 2
-};
-
-static u8 t15_config_e[] = { TOUCH_KEYARRAY_T15,
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-};
-
-static u8 t18_config_e[] = { SPT_COMCONFIG_T18,
-	0, 0
-};
-
-static u8 t23_config_e[] = { TOUCH_PROXIMITY_T23,
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-};
-
-static u8 t25_config_e[] = { SPT_SELFTEST_T25,
-	0, 0, 188, 52, 124, 21, 188, 52, 124, 21, 0, 0, 0, 0
-};
-
-static u8 t40_config_e[] = { PROCI_GRIPSUPPRESSION_T40,
-	0, 0, 0, 0, 0
-};
-
-static u8 t42_config_e[] = { PROCI_TOUCHSUPPRESSION_T42,
-	0, 32, 120, 100, 0, 0, 0, 0
-};
-
-static u8 t46_config_e[] = { SPT_CTECONFIG_T46,
-	0, 3, 16, 35, 0, 0, 1, 0
-};
-
-static u8 t47_config_e[] = { PROCI_STYLUS_T47,
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-};
-
-/*MXT224E_0V5_CONFIG */
-static u8 t48_config_e[] = { PROCG_NOISESUPPRESSION_T48,
-	3, 4, 72, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-	6, 6, 0, 0, 100, 4, 64, 10, 0, 20, 5, 0, 38, 0, 5,
-	0, 0, 0, 0, 0, 0, 32, 50, 2, 3, 1, 11, 10, 5, 40, 10, 10,
-	10, 10, 143, 40, 143, 80, 18, 15, 2
-};
-
-static u8 t48_config_chrg_e[] = { PROCG_NOISESUPPRESSION_T48,
-	1, 4, 88, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-	6, 6, 0, 0, 100, 4, 64, 10, 0, 20, 5, 0, 38, 0, 20,
-	0, 0, 0, 0, 0, 0, 16, 70, 2, 5, 2, 46, 10, 5, 40, 10, 0,
-	10, 10, 143, 40, 143, 80, 18, 15, 2
-};
-
-#else
-static u8 t7_config_e[] = { GEN_POWERCONFIG_T7,
-	48,			/* IDLEACQINT */
-	255,			/* ACTVACQINT */
-	25			/* ACTV2IDLETO: 25 * 200ms = 5s */
-};
-
-static u8 t8_config_e[] = { GEN_ACQUISITIONCONFIG_T8,
-	MXT224E_GHRGTIME_BATT, 0, 5, 1, 0, 0,
-	MXT224E_ATCHCALST, MXT224E_ATCHCALTHR,
-	MXT224E_ATCHFRCCALTHR_NORMAL,
-	MXT224E_ATCHFRCCALRATIO_NORMAL
-};
-
-/* MXT224E_0V5_CONFIG */
-/* NEXTTCHDI added */
-#ifdef CONFIG_TARGET_LOCALE_NA
-#ifdef CONFIG_MACH_U1_NA_USCC_REV05
-static u8 t9_config_e[] = { TOUCH_MULTITOUCHSCREEN_T9,
-	139, 0, 0, 19, 11, 0, MXT224E_BLEN_BATT, MXT224E_THRESHOLD_BATT, 2, 1,
-	10,
-	10,			/* MOVHYSTI */
-	1, MXT224E_MOVFILTER_BATT, MXT224_MAX_MT_FINGERS, 5, 40, 10, 31, 3,
-	223, 1, 10, 10, 10, 10, 143, 40, 143, 80,
-	18, 15, 50, 50, 0
-};
-
-#else
-static u8 t9_config_e[] = { TOUCH_MULTITOUCHSCREEN_T9,
-	139, 0, 0, 19, 11, 0, MXT224E_BLEN_BATT, MXT224E_THRESHOLD_BATT, 2, 1,
-	10,
-	10,			/* MOVHYSTI */
-	1, MXT224E_MOVFILTER_BATT, MXT224_MAX_MT_FINGERS, 5, 40, 10, 31, 3,
-	223, 1, 10, 10, 10, 10, 143, 40, 143, 80,
-	18, 15, 50, 50, 2
-};
-#endif
-#else
-static u8 t9_config_e[] = { TOUCH_MULTITOUCHSCREEN_T9,
-	139, 0, 0, 19, 11, 0, MXT224E_BLEN_BATT, MXT224E_THRESHOLD_BATT, 2, 1,
-	10,
-	15,			/* MOVHYSTI */
-	1, MXT224E_MOVFILTER_BATT, MXT224_MAX_MT_FINGERS, 5, 40, 10, 31, 3,
-	223, 1, 10, 10, 10, 10, 143, 40, 143, 80,
-	18, 15, 50, 50, MXT224E_NEXTTCHDI_NORMAL
-};
-#endif
-
-static u8 t15_config_e[] = { TOUCH_KEYARRAY_T15,
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-};
-
-static u8 t18_config_e[] = { SPT_COMCONFIG_T18,
-	0, 0
-};
-
-static u8 t23_config_e[] = { TOUCH_PROXIMITY_T23,
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-};
-
-static u8 t25_config_e[] = { SPT_SELFTEST_T25,
-	0, 0, 0, 0, 0, 0, 0, 0
-};
-
-#ifdef CONFIG_MACH_U1_NA_USCC_REV05
-static u8 t38_config_e[] = { SPT_USERDATA_T38,
-	0, 1, 13, 19, 44, 0, 0, 0
-};
-#else
-static u8 t38_config_e[] = { SPT_USERDATA_T38,
-	0, 1, 14, 23, 44, 0, 0, 0
-};
-#endif
-
-static u8 t40_config_e[] = { PROCI_GRIPSUPPRESSION_T40,
-	0, 0, 0, 0, 0
-};
-
-static u8 t42_config_e[] = { PROCI_TOUCHSUPPRESSION_T42,
-	0, 0, 0, 0, 0, 0, 0, 0
-};
-
-static u8 t46_config_e[] = { SPT_CTECONFIG_T46,
-	0, 3, 16, MXT224E_ACTVSYNCSPERX_NORMAL, 0, 0, 1, 0, 0
-};
-
-static u8 t47_config_e[] = { PROCI_STYLUS_T47,
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-};
-
-/*MXT224E_0V5_CONFIG */
-#ifdef CONFIG_TARGET_LOCALE_NA
-#ifdef CONFIG_MACH_U1_NA_USCC_REV05
-static u8 t48_config_chrg_e[] = { PROCG_NOISESUPPRESSION_T48,
-	3, 132, 0x52, 0, 0, 0, 0, 0, 10, 15,
-	0, 0, 0, 6, 6, 0, 0, 64, 4, 64,
-	10, 0, 10, 5, 0, 19, 0, 20, 0, 0,
-	0, 0, 0, 0, 0, 40, 2,	/*blen=0,threshold=50 */
-	10,			/* MOVHYSTI */
-	1, 47,
-	10, 5, 40, 240, 245, 10, 10, 148, 50, 143,
-	80, 18, 10, 0
-};
-
-static u8 t48_config_e[] = { PROCG_NOISESUPPRESSION_T48,
-	3, 132, 0x40, 0, 0, 0, 0, 0, 10, 15,
-	0, 0, 0, 6, 6, 0, 0, 64, 4, 64,
-	10, 0, 20, 5, 0, 38, 0, 5, 0, 0,	/*byte 27 original value 20 */
-	0, 0, 0, 0, 32, MXT224E_THRESHOLD, 2,
-	10,
-	1, 46,
-	MXT224_MAX_MT_FINGERS, 5, 40, 10, 0, 10, 10, 143, 40, 143,
-	80, 18, 15, 0
-};
-#else
-static u8 t48_config_chrg_e[] = { PROCG_NOISESUPPRESSION_T48,
-	1, 4, 0x50, 0, 0, 0, 0, 0, 0, 0,
-	0, 0, 0, 6, 6, 0, 0, 100, 4, 64,
-	10, 0, 20, 5, 0, 38, 0, 20, 0, 0,
-	0, 0, 0, 0, 0, 40, 2,	/*blen=0,threshold=50 */
-	10,			/* MOVHYSTI */
-	1, 15,
-	10, 5, 40, 240, 245, 10, 10, 148, 50, 143,
-	80, 18, 10, 2
-};
-
-static u8 t48_config_e[] = { PROCG_NOISESUPPRESSION_T48,
-	1, 4, 0x40, 0, 0, 0, 0, 0, 0, 0,
-	0, 0, 0, 6, 6, 0, 0, 100, 4, 64,
-	10, 0, 20, 5, 0, 38, 0, 5, 0, 0,	/*byte 27 original value 20 */
-	0, 0, 0, 0, 32, 50, 2,
-	10,
-	1, 46,
-	MXT224_MAX_MT_FINGERS, 5, 40, 10, 0, 10, 10, 143, 40, 143,
-	80, 18, 15, 2
-};
-#endif				/*CONFIG_MACH_U1_NA_USCC_REV05 */
-#else
-static u8 t48_config_chrg_e[] = { PROCG_NOISESUPPRESSION_T48,
-	3, 132, MXT224E_CALCFG_CHRG, 0, 0, 0, 0, 0, 10, 15,
-	0, 0, 0, 6, 6, 0, 0, 64, 4, 64,
-	10, 0, 9, 5, 0, 15, 0, 20, 0, 0,
-	0, 0, 0, 0, 0, MXT224E_THRESHOLD_CHRG, 2,
-	15,			/* MOVHYSTI */
-	1, 47,
-	MXT224_MAX_MT_FINGERS, 5, 40, 235, 235, 10, 10, 160, 50, 143,
-	80, 18, 10, 0
-};
-
-static u8 t48_config_e[] = { PROCG_NOISESUPPRESSION_T48,
-	3, 132, MXT224E_CALCFG_BATT, 0, 0, 0, 0, 0, 10, 15,
-	0, 0, 0, 6, 6, 0, 0, 48, 4, 48,
-	10, 0, 10, 5, 0, 20, 0, 5, 0, 0,	/*byte 27 original value 20 */
-	0, 0, 0, 0, 32, MXT224E_THRESHOLD_BATT, 2,
-	15,
-	1, 46,
-	MXT224_MAX_MT_FINGERS, 5, 40, 10, 10, 10, 10, 143, 40, 143,
-	80, 18, 15, 0
-};
-#endif				/*CONFIG_TARGET_LOCALE_NA */
-#endif				/*CONFIG_TARGET_LOCALE_NAATT */
-
-static u8 end_config_e[] = { RESERVED_T255 };
-
-static const u8 *mxt224e_config[] = {
-	t7_config_e,
-	t8_config_e,
-	t9_config_e,
-	t15_config_e,
-	t18_config_e,
-	t23_config_e,
-	t25_config_e,
-	t38_config_e,
-	t40_config_e,
-	t42_config_e,
-	t46_config_e,
-	t47_config_e,
-	t48_config_e,
-	end_config_e,
-};
-
-static struct mxt224_platform_data mxt224_data = {
-	.max_finger_touches = MXT224_MAX_MT_FINGERS,
-	.gpio_read_done = GPIO_TSP_INT,
-	.config = mxt224_config,
-	.config_e = mxt224e_config,
-	.t48_config_batt_e = t48_config_e,
-	.t48_config_chrg_e = t48_config_chrg_e,
-	.min_x = 0,
-	.max_x = 479,
-	.min_y = 0,
-	.max_y = 799,
-	.min_z = 0,
-	.max_z = 255,
-	.min_w = 0,
-	.max_w = 30,
-	.atchcalst = MXT224_ATCHCALST,
-	.atchcalsthr = MXT224_ATCHCALTHR,
-	.tchthr_batt = MXT224_THRESHOLD_BATT,
-	.tchthr_batt_init = MXT224_THRESHOLD_BATT_INIT,
-	.tchthr_charging = MXT224_THRESHOLD_CHRG,
-	.noisethr_batt = MXT224_NOISE_THRESHOLD_BATT,
-	.noisethr_charging = MXT224_NOISE_THRESHOLD_CHRG,
-	.movfilter_batt = MXT224_MOVFILTER_BATT,
-	.movfilter_charging = MXT224_MOVFILTER_CHRG,
-	.atchcalst_e = MXT224E_ATCHCALST,
-	.atchcalsthr_e = MXT224E_ATCHCALTHR,
-	.tchthr_batt_e = MXT224E_THRESHOLD_BATT,
-	.tchthr_charging_e = MXT224E_THRESHOLD_CHRG,
-	.calcfg_batt_e = MXT224E_CALCFG_BATT,
-	.calcfg_charging_e = MXT224E_CALCFG_CHRG,
-	.atchfrccalthr_e = MXT224E_ATCHFRCCALTHR_NORMAL,
-	.atchfrccalratio_e = MXT224E_ATCHFRCCALRATIO_NORMAL,
-	.chrgtime_batt_e = MXT224E_GHRGTIME_BATT,
-	.chrgtime_charging_e = MXT224E_GHRGTIME_CHRG,
-	.blen_batt_e = MXT224E_BLEN_BATT,
-	.blen_charging_e = MXT224E_BLEN_CHRG,
-	.movfilter_batt_e = MXT224E_MOVFILTER_BATT,
-	.movfilter_charging_e = MXT224E_MOVFILTER_CHRG,
-	.actvsyncsperx_e = MXT224E_ACTVSYNCSPERX_NORMAL,
-	.nexttchdi_e = MXT224E_NEXTTCHDI_NORMAL,
-	.power_on = mxt224_power_on,
-	.power_off = mxt224_power_off,
-	.register_cb = tsp_register_callback,
-	.read_ta_status = tsp_read_ta_status,
-};
-
-#endif				/*CONFIG_TOUCHSCREEN_ATMEL_MXT224_U1 */
-
-#if defined(CONFIG_TOUCHSCREEN_ATMEL_MXT540E)
-static void mxt540e_power_on(void)
-{
-	gpio_request(GPIO_TSP_SDA, "TSP_SDA");
-	gpio_request(GPIO_TSP_SCL, "TSP_SCL");
-
-	s3c_gpio_cfgpin(GPIO_TSP_SDA, S3C_GPIO_SFN(3));
-	s3c_gpio_cfgpin(GPIO_TSP_SCL, S3C_GPIO_SFN(3));
-	s3c_gpio_setpull(GPIO_TSP_SDA, S3C_GPIO_PULL_UP);
-	s3c_gpio_setpull(GPIO_TSP_SCL, S3C_GPIO_PULL_UP);
-
-	s3c_gpio_cfgpin(GPIO_TSP_LDO_ON, S3C_GPIO_OUTPUT);
-	s3c_gpio_setpull(GPIO_TSP_LDO_ON, S3C_GPIO_PULL_NONE);
-	gpio_direction_output(GPIO_TSP_LDO_ON, GPIO_LEVEL_HIGH);
-	msleep(MXT540E_HW_RESET_TIME);
-	s3c_gpio_setpull(GPIO_TSP_INT, S3C_GPIO_PULL_NONE);
-	s3c_gpio_cfgpin(GPIO_TSP_INT, S3C_GPIO_SFN(0xf));
-
-	gpio_free(GPIO_TSP_SDA);
-	gpio_free(GPIO_TSP_SCL);
-}
-
-static void mxt540e_power_off(void)
-{
-	gpio_request(GPIO_TSP_SDA, "TSP_SDA");
-	gpio_request(GPIO_TSP_SCL, "TSP_SCL");
-
-	s3c_gpio_cfgpin(GPIO_TSP_SDA, S3C_GPIO_OUTPUT);
-	s3c_gpio_cfgpin(GPIO_TSP_SCL, S3C_GPIO_OUTPUT);
-	s3c_gpio_setpull(GPIO_TSP_SDA, S3C_GPIO_PULL_NONE);
-	s3c_gpio_setpull(GPIO_TSP_SCL, S3C_GPIO_PULL_NONE);
-	gpio_direction_output(GPIO_TSP_SDA, GPIO_LEVEL_LOW);
-	gpio_direction_output(GPIO_TSP_SCL, GPIO_LEVEL_LOW);
-
-	s3c_gpio_cfgpin(GPIO_TSP_INT, S3C_GPIO_INPUT);
-	s3c_gpio_setpull(GPIO_TSP_INT, S3C_GPIO_PULL_DOWN);
-	gpio_direction_output(GPIO_TSP_INT, GPIO_LEVEL_LOW);
-
-	s3c_gpio_cfgpin(GPIO_TSP_LDO_ON, S3C_GPIO_OUTPUT);
-	s3c_gpio_setpull(GPIO_TSP_LDO_ON, S3C_GPIO_PULL_NONE);
-	gpio_direction_output(GPIO_TSP_LDO_ON, GPIO_LEVEL_LOW);
-
-	gpio_free(GPIO_TSP_SDA);
-	gpio_free(GPIO_TSP_SCL);
-}
-
-static void mxt540e_power_on_oled(void)
-{
-	gpio_request(GPIO_OLED_DET, "OLED_DET");
-
-	mxt540e_power_on();
-
-	s3c_gpio_setpull(GPIO_OLED_DET, S3C_GPIO_PULL_NONE);
-	s3c_gpio_cfgpin(GPIO_OLED_DET, S3C_GPIO_SFN(0xf));
-
-	gpio_free(GPIO_OLED_DET);
-
-	printk(KERN_INFO "[TSP] %s\n", __func__);
-}
-
-static void mxt540e_power_off_oled(void)
-{
-	gpio_request(GPIO_OLED_DET, "OLED_DET");
-
-	s3c_gpio_cfgpin(GPIO_OLED_DET, S3C_GPIO_OUTPUT);
-	s3c_gpio_setpull(GPIO_OLED_DET, S3C_GPIO_PULL_NONE);
-	gpio_direction_output(GPIO_OLED_DET, GPIO_LEVEL_LOW);
-
-	mxt540e_power_off();
-
-	gpio_free(GPIO_OLED_DET);
-
-	printk(KERN_INFO "[TSP] %s\n", __func__);
-}
-
-/*
-  Configuration for MXT540E
-*/
-#define MXT540E_MAX_MT_FINGERS		10
-#define MXT540E_CHRGTIME_BATT		48
-#define MXT540E_CHRGTIME_CHRG		48
-#define MXT540E_THRESHOLD_BATT		50
-#define MXT540E_THRESHOLD_CHRG		40
-#define MXT540E_ACTVSYNCSPERX_BATT		24
-#define MXT540E_ACTVSYNCSPERX_CHRG		28
-#define MXT540E_CALCFG_BATT		98
-#define MXT540E_CALCFG_CHRG		114
-#define MXT540E_ATCHFRCCALTHR_WAKEUP		8
-#define MXT540E_ATCHFRCCALRATIO_WAKEUP		180
-#define MXT540E_ATCHFRCCALTHR_NORMAL		40
-#define MXT540E_ATCHFRCCALRATIO_NORMAL		55
-
-static u8 t7_config_e[] = { GEN_POWERCONFIG_T7,
-	48, 255, 50
-};
-
-static u8 t8_config_e[] = { GEN_ACQUISITIONCONFIG_T8,
-	MXT540E_CHRGTIME_BATT, 0, 5, 1, 0, 0, 4, 20,
-	MXT540E_ATCHFRCCALTHR_WAKEUP, MXT540E_ATCHFRCCALRATIO_WAKEUP
-};
-
-static u8 t9_config_e[] = { TOUCH_MULTITOUCHSCREEN_T9,
-	131, 0, 0, 16, 26, 0, 192, MXT540E_THRESHOLD_BATT, 2, 6,
-	10, 10, 10, 80, MXT540E_MAX_MT_FINGERS, 20, 40, 20, 31, 3,
-	255, 4, 3, 3, 2, 2, 136, 60, 136, 40,
-	18, 15, 0, 0, 0
-};
-
-static u8 t15_config_e[] = { TOUCH_KEYARRAY_T15,
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-};
-
-static u8 t18_config_e[] = { SPT_COMCONFIG_T18,
-	0, 0
-};
-
-static u8 t19_config_e[] = { SPT_GPIOPWM_T19,
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-};
-
-static u8 t24_config_e[] = { PROCI_ONETOUCHGESTUREPROCESSOR_T24,
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-};
-
-static u8 t25_config_e[] = { SPT_SELFTEST_T25,
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-};
-
-static u8 t27_config_e[] = { PROCI_TWOTOUCHGESTUREPROCESSOR_T27,
-	0, 0, 0, 0, 0, 0, 0
-};
-
-static u8 t40_config_e[] = { PROCI_GRIPSUPPRESSION_T40,
-	0, 0, 0, 0, 0
-};
-
-static u8 t42_config_e[] = { PROCI_TOUCHSUPPRESSION_T42,
-	0, 0, 0, 0, 0, 0, 0, 0
-};
-
-static u8 t43_config_e[] = { SPT_DIGITIZER_T43,
-	0, 0, 0, 0, 0, 0, 0
-};
-
-static u8 t46_config_e[] = { SPT_CTECONFIG_T46,
-	0, 0, 16, MXT540E_ACTVSYNCSPERX_BATT, 0, 0, 1, 0
-};
-
-static u8 t47_config_e[] = { PROCI_STYLUS_T47,
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-};
-
-static u8 t48_config_e[] = { PROCG_NOISESUPPRESSION_T48,
-	3, 132, MXT540E_CALCFG_BATT, 0, 0, 0, 0, 0, 1, 2,
-	0, 0, 0, 6, 6, 0, 0, 28, 4, 64,
-	10, 0, 20, 6, 0, 30, 0, 0, 0, 0,
-	0, 0, 0, 0, 192, MXT540E_THRESHOLD_BATT, 2, 10, 10, 47,
-	MXT540E_MAX_MT_FINGERS, 5, 20, 253, 0, 7, 7, 160, 55, 136,
-	0, 18, 5, 0, 0, 0, 0, 0, 0, 0,
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-	0, 0, 0, 0
-};
-
-static u8 t48_config_chrg_e[] = { PROCG_NOISESUPPRESSION_T48,
-	3, 132, MXT540E_CALCFG_CHRG, 0, 0, 0, 0, 0, 0, 0,
-	0, 0, 0, 6, 6, 0, 0, 36, 4, 64,
-	10, 0, 10, 6, 0, 20, 0, 0, 0, 0,
-	0, 0, 0, 0, 112, MXT540E_THRESHOLD_CHRG, 2, 10, 5, 47,
-	MXT540E_MAX_MT_FINGERS, 5, 20, 253, 0, 7, 7, 160, 55, 136,
-	0, 18, 10, 0, 0, 0, 0, 0, 0, 0,
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-	0, 0, 0, 0
-};
-
-static u8 t52_config_e[] = { TOUCH_PROXKEY_T52,
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-};
-
-static u8 t55_config_e[] = {ADAPTIVE_T55,
-	0, 0, 0, 0, 0, 0
-};
-
-static u8 t57_config_e[] = {SPT_GENERICDATA_T57,
-	131, 25, 0
-};
-
-static u8 end_config_e[] = { RESERVED_T255 };
-
-static const u8 *mxt540e_config[] = {
-	t7_config_e,
-	t8_config_e,
-	t9_config_e,
-	t15_config_e,
-	t18_config_e,
-	t19_config_e,
-	t24_config_e,
-	t25_config_e,
-	t27_config_e,
-	t40_config_e,
-	t42_config_e,
-	t43_config_e,
-	t46_config_e,
-	t47_config_e,
-	t48_config_e,
-	t52_config_e,
-	t55_config_e,
-	t57_config_e,
-	end_config_e,
-};
-
-struct mxt540e_platform_data mxt540e_data = {
-	.max_finger_touches = MXT540E_MAX_MT_FINGERS,
-	.gpio_read_done = GPIO_TSP_INT,
-	.config_e = mxt540e_config,
-	.min_x = 0,
-	.max_x = 799,
-	.min_y = 0,
-	.max_y = 1279,
-	.min_z = 0,
-	.max_z = 255,
-	.min_w = 0,
-	.max_w = 30,
-	.chrgtime_batt = MXT540E_CHRGTIME_BATT,
-	.chrgtime_charging = MXT540E_CHRGTIME_CHRG,
-	.tchthr_batt = MXT540E_THRESHOLD_BATT,
-	.tchthr_charging = MXT540E_THRESHOLD_CHRG,
-	.actvsyncsperx_batt = MXT540E_ACTVSYNCSPERX_BATT,
-	.actvsyncsperx_charging = MXT540E_ACTVSYNCSPERX_CHRG,
-	.calcfg_batt_e = MXT540E_CALCFG_BATT,
-	.calcfg_charging_e = MXT540E_CALCFG_CHRG,
-	.atchfrccalthr_e = MXT540E_ATCHFRCCALTHR_NORMAL,
-	.atchfrccalratio_e = MXT540E_ATCHFRCCALRATIO_NORMAL,
-	.t48_config_batt_e = t48_config_e,
-	.t48_config_chrg_e = t48_config_chrg_e,
-	.power_on = mxt540e_power_on,
-	.power_off = mxt540e_power_off,
-	.power_on_with_oleddet = mxt540e_power_on_oled,
-	.power_off_with_oleddet = mxt540e_power_off_oled,
-	.register_cb = tsp_register_callback,
-	.read_ta_status = tsp_read_ta_status,
-};
-#endif
-
-#ifdef CONFIG_EPEN_WACOM_G5SP
-static int p6_wacom_init_hw(void);
-static int p6_wacom_exit_hw(void);
-static int p6_wacom_suspend_hw(void);
-static int p6_wacom_resume_hw(void);
-static int p6_wacom_early_suspend_hw(void);
-static int p6_wacom_late_resume_hw(void);
-static int p6_wacom_reset_hw(void);
-static void p6_wacom_register_callbacks(struct wacom_g5_callbacks *cb);
-
-static struct wacom_g5_platform_data p6_wacom_platform_data = {
-	.x_invert = 1,
-	.y_invert = 0,
-	.xy_switch = 1,
-	.min_x = 0,
-	.max_x = WACOM_POSX_MAX,
-	.min_y = 0,
-	.max_y = WACOM_POSY_MAX,
-	.min_pressure = 0,
-	.max_pressure = WACOM_PRESSURE_MAX,
-	.init_platform_hw = p6_wacom_init_hw,
-/*	.exit_platform_hw =,	*/
-	.suspend_platform_hw = p6_wacom_suspend_hw,
-	.resume_platform_hw = p6_wacom_resume_hw,
-	.early_suspend_platform_hw = p6_wacom_early_suspend_hw,
-	.late_resume_platform_hw = p6_wacom_late_resume_hw,
-	.reset_platform_hw = p6_wacom_reset_hw,
-	.register_cb = p6_wacom_register_callbacks,
-};
-
-#endif
-
-#ifdef CONFIG_EPEN_WACOM_G5SP
-static int p6_wacom_suspend_hw(void)
-{
-	return p6_wacom_early_suspend_hw();
-}
-
-static int p6_wacom_resume_hw(void)
-{
-	return p6_wacom_late_resume_hw();
-}
-
-static int p6_wacom_early_suspend_hw(void)
-{
-	gpio_set_value(GPIO_PEN_RESET, 0);
-	return 0;
-}
-
-static int p6_wacom_late_resume_hw(void)
-{
-	gpio_set_value(GPIO_PEN_RESET, 1);
-	return 0;
-}
-
-static int p6_wacom_reset_hw(void)
-{
-	gpio_set_value(GPIO_PEN_RESET, 0);
-	msleep(200);
-	gpio_set_value(GPIO_PEN_RESET, 1);
-	return 0;
-}
-
-static void p6_wacom_register_callbacks(struct wacom_g5_callbacks *cb)
-{
-	wacom_callbacks = cb;
-};
-
-#endif /* CONFIG_EPEN_WACOM_G5SP */
-
 #ifdef CONFIG_I2C_S3C2410
 /* I2C0 */
 static struct i2c_board_info i2c_devs0[] __initdata = {
@@ -4649,24 +3933,6 @@ static struct i2c_board_info i2c_devs1[] __initdata = {
 #ifdef CONFIG_S3C_DEV_I2C2
 /* I2C2 */
 static struct i2c_board_info i2c_devs2[] __initdata = {
-};
-#endif
-#ifdef CONFIG_S3C_DEV_I2C3
-/* I2C3 */
-static struct i2c_board_info i2c_devs3[] __initdata = {
-#ifdef CONFIG_TOUCHSCREEN_ATMEL_MXT224_U1
-	{
-		I2C_BOARD_INFO(MXT224_DEV_NAME, 0x4a),
-		.platform_data = &mxt224_data,
-	},
-#endif
-#ifdef CONFIG_TOUCHSCREEN_ATMEL_MXT540E
-	{
-		I2C_BOARD_INFO(MXT540E_DEV_NAME, 0x4c),
-		.platform_data = &mxt540e_data,
-	},
-#endif
-
 };
 #endif
 #ifdef CONFIG_S3C_DEV_I2C4
@@ -4727,25 +3993,6 @@ static struct i2c_board_info i2c_devs7[] __initdata = {
 #endif
 };
 #endif
-#ifdef CONFIG_S3C_DEV_I2C8_EMUL
-static struct i2c_gpio_platform_data gpio_i2c_data8 = {
-	.sda_pin = GPIO_3_TOUCH_SDA,
-	.scl_pin = GPIO_3_TOUCH_SCL,
-};
-
-struct platform_device s3c_device_i2c8 = {
-	.name = "i2c-gpio",
-	.id = 8,
-	.dev.platform_data = &gpio_i2c_data8,
-};
-
-/* I2C8 */
-static struct i2c_board_info i2c_devs8_emul[] = {
-	{
-		I2C_BOARD_INFO("sec_touchkey", 0x20),
-	},
-};
-#endif
 
 #ifdef CONFIG_S3C_DEV_I2C9_EMUL
 static struct i2c_gpio_platform_data gpio_i2c_data9 = {
@@ -4755,7 +4002,7 @@ static struct i2c_gpio_platform_data gpio_i2c_data9 = {
 
 struct platform_device s3c_device_i2c9 = {
 	.name = "i2c-gpio",
-	.id = 9,
+	.id = I2C_GPIO_BUS_GAUGE,
 	.dev.platform_data = &gpio_i2c_data9,
 };
 
@@ -4871,7 +4118,7 @@ static struct i2c_gpio_platform_data gpio_i2c_data10 __initdata = {
 
 struct platform_device s3c_device_i2c10 = {
 	.name = "i2c-gpio",
-	.id = 10,
+	.id = I2C_GPIO_BUS_USB,
 	.dev.platform_data = &gpio_i2c_data10,
 };
 
@@ -4895,7 +4142,7 @@ static struct i2c_gpio_platform_data gpio_i2c_data11 = {
 
 struct platform_device s3c_device_i2c11 = {
 	.name = "i2c-gpio",
-	.id = 11,
+	.id = I2C_GPIO_BUS_PROX,
 	.dev.platform_data = &gpio_i2c_data11,
 };
 
@@ -4997,7 +4244,7 @@ static struct i2c_gpio_platform_data i2c14_platdata = {
 
 static struct platform_device s3c_device_i2c14 = {
 	.name = "i2c-gpio",
-	.id = 14,
+	.id = I2C_GPIO_BUS_NFC,
 	.dev.platform_data = &i2c14_platdata,
 };
 
@@ -5054,7 +4301,7 @@ static struct i2c_gpio_platform_data i2c12_platdata = {
 
 static struct platform_device s3c_device_i2c12 = {
 	.name = "i2c-gpio",
-	.id = 12,
+	.id = I2C_GPIO_BUS_VT_CAM,
 	.dev.platform_data = &i2c12_platdata,
 };
 
@@ -5076,7 +4323,7 @@ static struct i2c_gpio_platform_data i2c16_platdata = {
 
 static struct platform_device s3c_device_i2c16 = {
 	.name					= "i2c-gpio",
-	.id						= 16,
+	.id						= I2C_GPIO_BUS_FM,
 	.dev.platform_data	= &i2c16_platdata,
 };
 
@@ -5120,7 +4367,7 @@ static struct i2c_gpio_platform_data i2c17_platdata = {
 
 static struct platform_device s3c_device_i2c17 = {
 	.name			= "i2c-gpio",
-	.id				= 17,
+	.id				= I2C_GPIO_BUS_DBT,
 	.dev.platform_data	= &i2c17_platdata,
 };
 #endif
@@ -5474,6 +4721,118 @@ static struct platform_device exynos4_busfreq = {
 };
 #endif
 
+/******************************************************************************
+ * touch keys
+ *****************************************************************************/
+static struct i2c_gpio_platform_data i2c_gpio_touchkey_data = {
+	.sda_pin	= GPIO_3_TOUCH_SDA,
+	.scl_pin	= GPIO_3_TOUCH_SCL,
+	.udelay		= 2,
+};
+
+static struct platform_device i2c_gpio_touchkey = {
+	.name		= "i2c-gpio",
+	.id		= I2C_GPIO_BUS_TOUCHKEY,
+	.dev		= {
+		.platform_data	= &i2c_gpio_touchkey_data,
+	},
+};
+
+static void i9100_mcs_power(bool on) {
+	struct regulator *regulator;
+	regulator = regulator_get(NULL, "touchkey");
+	if (IS_ERR(regulator)) {
+		pr_err("%s: failed to get regulator\n", __func__);
+		return;
+	}
+
+	if (on) {
+		regulator_enable(regulator);
+	} else {
+		regulator_disable(regulator);
+	}
+
+	regulator_put(regulator);
+}
+
+static uint32_t touchkey_keymap[] = {
+	MCS_KEY_MAP(0, KEY_MENU),
+	MCS_KEY_MAP(1, KEY_BACK),
+};
+
+static struct mcs_platform_data touchkey_data = {
+	.keymap		= touchkey_keymap,
+	.keymap_size	= ARRAY_SIZE(touchkey_keymap),
+	.key_maxval	= 2,
+	.poweron = i9100_mcs_power,
+};
+
+static struct i2c_board_info i2c_gpio_touchkey_devs[] __initdata = {
+	{
+		I2C_BOARD_INFO("mcs5000_touchkey", 0x20),
+		.platform_data = &touchkey_data,
+	},
+};
+
+static void __init i9100_init_touchkey(void)
+{
+	gpio_request(GPIO_3_TOUCH_INT, "3_TOUCH_INT");
+	s5p_register_gpio_interrupt(GPIO_3_TOUCH_INT);
+	s3c_gpio_cfgpin(GPIO_3_TOUCH_INT, S3C_GPIO_SFN(0xf));
+	s3c_gpio_setpull(GPIO_3_TOUCH_INT, S3C_GPIO_PULL_UP);
+	i2c_gpio_touchkey_devs[0].irq = gpio_to_irq(GPIO_3_TOUCH_INT);
+
+	i2c_register_board_info(I2C_GPIO_BUS_TOUCHKEY,
+		i2c_gpio_touchkey_devs, ARRAY_SIZE(i2c_gpio_touchkey_devs));
+}
+
+/******************************************************************************
+ * touchscreen
+ *****************************************************************************/
+static struct mxt_platform_data qt602240_platform_data = {
+	.x_line		= 19,
+	.y_line		= 11,
+	.x_size		= 800,
+	.y_size		= 480,
+	.blen		= 0x11,
+	.threshold	= 0x28,
+	.voltage	= 2800000,
+	.orient	= MXT_DIAGONAL,
+	.irqflags = IRQF_TRIGGER_FALLING,
+};
+
+static struct i2c_board_info i2c3_devs[] __initdata = {
+	{
+		I2C_BOARD_INFO("qt602240_ts", 0x4a),
+		.platform_data = &qt602240_platform_data,
+	},
+};
+
+static struct s3c2410_platform_i2c i2c3_data __initdata = {
+	.flags		= 0,
+	.bus_num	= 3,
+	.slave_addr	= 0x10,
+	.frequency	= 400 * 1000,
+	.sda_delay	= 100,
+};
+
+static void __init i9100_init_tsp(void) {
+	gpio_request(GPIO_TSP_INT, "TOUCH_INT");
+	s5p_register_gpio_interrupt(GPIO_TSP_INT);
+	s3c_gpio_cfgpin(GPIO_TSP_INT, S3C_GPIO_SFN(0xf));
+	s3c_gpio_setpull(GPIO_TSP_INT, S3C_GPIO_PULL_UP);
+	i2c3_devs[0].irq = gpio_to_irq(GPIO_TSP_INT);
+
+	gpio_request(GPIO_TSP_LDO_ON, "TOUCH_LDO");
+	s3c_gpio_cfgpin(GPIO_TSP_LDO_ON, S3C_GPIO_OUTPUT);
+	s3c_gpio_setpull(GPIO_TSP_LDO_ON, S3C_GPIO_PULL_NONE);
+	gpio_direction_output(GPIO_TSP_LDO_ON, 1);
+	msleep(100);
+}
+
+/******************************************************************************
+ * devices list
+ ******************************************************************************/
 static struct platform_device *smdkc210_devices[] __initdata = {
 	&exynos4_device_pd[PD_MFC],
 	&exynos4_device_pd[PD_G3D],
@@ -5513,9 +4872,7 @@ static struct platform_device *smdkc210_devices[] __initdata = {
 #if defined(CONFIG_S3C_DEV_I2C7)
 	&s3c_device_i2c7,
 #endif
-#if defined(CONFIG_S3C_DEV_I2C8_EMUL)
-	&s3c_device_i2c8,
-#endif
+	&i2c_gpio_touchkey,
 #if defined(CONFIG_S3C_DEV_I2C9_EMUL)
 	&s3c_device_i2c9,
 #endif
@@ -6008,76 +5365,6 @@ static void __init smdkc210_map_io(void)
 	sec_debug_init();
 }
 
-static void __init universal_tsp_init(void)
-{
-	int gpio;
-
-	/* TSP_LDO_ON: XMDMADDR_11 */
-	gpio = GPIO_TSP_LDO_ON;
-	gpio_request(gpio, "TSP_LDO_ON");
-	gpio_direction_output(gpio, 1);
-	gpio_export(gpio, 0);
-
-	/* TSP_INT: XMDMADDR_7 */
-	gpio = GPIO_TSP_INT;
-	gpio_request(gpio, "TSP_INT");
-	s3c_gpio_cfgpin(gpio, S3C_GPIO_SFN(0xf));
-	s3c_gpio_setpull(gpio, S3C_GPIO_PULL_UP);
-	i2c_devs3[0].irq = gpio_to_irq(gpio);
-
-	printk(KERN_INFO "%s touch : %d\n", __func__, i2c_devs3[0].irq);
-#ifdef CONFIG_MACH_Q1_BD
-	gpio_request(GPIO_TSP_SDA, "TSP_SDA");
-	gpio_request(GPIO_TSP_SCL, "TSP_SCL");
-	gpio_request(GPIO_OLED_DET, "OLED_DET");
-#endif
-}
-
-#ifdef CONFIG_EPEN_WACOM_G5SP
-static int p6_wacom_init_hw(void)
-{
-	int gpio;
-	int ret;
-
-	gpio = GPIO_PEN_RESET;
-	ret = gpio_request(gpio, "PEN_RESET");
-	s3c_gpio_cfgpin(gpio, S3C_GPIO_OUTPUT);
-	gpio_direction_output(gpio, 1);
-
-	gpio = GPIO_PEN_SLP;
-	ret = gpio_request(gpio, "PEN_SLP");
-	s3c_gpio_cfgpin(gpio, S3C_GPIO_SFN(0x1));
-	s3c_gpio_setpull(gpio, S3C_GPIO_PULL_UP);
-	gpio_direction_output(gpio, 0);
-
-	gpio = GPIO_PEN_PDCT;
-	ret = gpio_request(gpio, "PEN_PDCT");
-	s3c_gpio_cfgpin(gpio, S3C_GPIO_SFN(0x0));
-	s3c_gpio_setpull(gpio, S3C_GPIO_PULL_UP);
-	gpio_direction_input(gpio);
-
-	gpio = GPIO_PEN_IRQ;
-	ret = gpio_request(gpio, "PEN_IRQ");
-	s3c_gpio_setpull(gpio, S3C_GPIO_PULL_NONE);
-	s5p_register_gpio_interrupt(gpio);
-	gpio_direction_input(gpio);
-
-	i2c_devs6[1].irq = gpio_to_irq(gpio);
-	irq_set_irq_type(i2c_devs6[1].irq, IRQ_TYPE_EDGE_RISING);
-
-	s3c_gpio_cfgpin(gpio, S3C_GPIO_SFN(0xf));
-
-	return 0;
-}
-
-static int __init p6_wacom_init(void)
-{
-	p6_wacom_init_hw();
-	printk(KERN_INFO "[E-PEN] : wacom IC initialized.\n");
-	return 0;
-}
-#endif
-
 static void __init smdkc210_machine_init(void)
 {
 #ifdef CONFIG_S3C64XX_DEV_SPI
@@ -6102,9 +5389,9 @@ static void __init smdkc210_machine_init(void)
 	i2c_register_board_info(2, i2c_devs2, ARRAY_SIZE(i2c_devs2));
 #endif
 #ifdef CONFIG_S3C_DEV_I2C3
-	universal_tsp_init();
-	s3c_i2c3_set_platdata(NULL);
-	i2c_register_board_info(3, i2c_devs3, ARRAY_SIZE(i2c_devs3));
+	i9100_init_tsp();
+	s3c_i2c3_set_platdata(&i2c3_data);
+	i2c_register_board_info(3, i2c3_devs, ARRAY_SIZE(i2c3_devs));
 #endif
 #ifdef CONFIG_S3C_DEV_I2C4
 	s3c_i2c4_set_platdata(NULL);
@@ -6128,17 +5415,12 @@ static void __init smdkc210_machine_init(void)
 	s3c_i2c7_set_platdata(NULL);
 	i2c_register_board_info(7, i2c_devs7, ARRAY_SIZE(i2c_devs7));
 #endif
+	i9100_init_touchkey();
 #ifdef CONFIG_SAMSUNG_MHL
 	printk(KERN_INFO "%s() register sii9234 driver\n", __func__);
 
 	i2c_register_board_info(15, tuna_i2c15_boardinfo,
 			ARRAY_SIZE(tuna_i2c15_boardinfo));
-#endif
-#ifdef CONFIG_S3C_DEV_I2C8_EMUL
-	i2c_register_board_info(8, i2c_devs8_emul, ARRAY_SIZE(i2c_devs8_emul));
-	gpio_request(GPIO_3_TOUCH_INT, "sec_touchkey");
-	s5p_register_gpio_interrupt(GPIO_3_TOUCH_INT);
-
 #endif
 #ifdef CONFIG_S3C_DEV_I2C9_EMUL
 	i2c_register_board_info(9, i2c_devs9_emul, ARRAY_SIZE(i2c_devs9_emul));
@@ -6365,17 +5647,7 @@ static void __init exynos_init_reserve(void)
 	sec_debug_magic_init();
 }
 
-#ifdef CONFIG_MACH_U1_KOR_SKT
-#define MODEL_NAME "SHW-M250S"
-#elif defined(CONFIG_MACH_U1_KOR_KT)
-#define MODEL_NAME "SHW-M250K"
-#elif defined(CONFIG_MACH_U1_KOR_LGT)
-#define MODEL_NAME "SHW-M250L"
-#else
-#define MODEL_NAME "SMDK4210"
-#endif
-
-MACHINE_START(SMDKC210, MODEL_NAME)
+MACHINE_START(SMDKC210, "SMDK4210")
 	/* Maintainer: Kukjin Kim <kgene.kim@samsung.com> */
 	.boot_params	= S5P_PA_SDRAM + 0x100,
 	.init_irq	= exynos4_init_irq,
