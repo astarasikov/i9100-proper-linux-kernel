@@ -1317,10 +1317,13 @@ static struct s3c_sdhci_platdata exynos4_hsmmc2_pdata __initdata = {
 #ifdef CONFIG_S3C_DEV_HSMMC3
 static struct s3c_sdhci_platdata exynos4_hsmmc3_pdata __initdata = {
 /* For Wi-Fi */
-#if 0
+#if 1
 	.cd_type = S3C_SDHCI_CD_PERMANENT,
 	.clk_type = S3C_SDHCI_CLK_DIV_EXTERNAL,
 	.pm_flags = S3C_SDHCI_PM_IGNORE_SUSPEND_RESUME,
+	.host_caps		= MMC_CAP_4_BIT_DATA |
+				MMC_CAP_MMC_HIGHSPEED | MMC_CAP_SD_HIGHSPEED,
+	.cfg_gpio = exynos4_setup_sdhci3_cfg_gpio,
 #else
 	.cd_type = S3C_SDHCI_CD_EXTERNAL,
 	.clk_type = S3C_SDHCI_CLK_DIV_EXTERNAL,
@@ -5473,6 +5476,8 @@ static void __init smdkc210_machine_init(void)
 	s3c_sdhci2_set_platdata(&exynos4_hsmmc2_pdata);
 #endif
 #ifdef CONFIG_S3C_DEV_HSMMC3
+	s3c_gpio_cfgpin(GPIO_WLAN_EN, S3C_GPIO_OUTPUT);
+	s3c_gpio_setpull(GPIO_WLAN_EN, S3C_GPIO_PULL_NONE);
 	s3c_sdhci3_set_platdata(&exynos4_hsmmc3_pdata);
 #endif
 
