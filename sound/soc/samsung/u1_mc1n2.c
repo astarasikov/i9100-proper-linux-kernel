@@ -255,13 +255,16 @@ static int __init u1_audio_init(void)
 	mc1n2_set_mclk_source(1);
 
 	u1_snd_device = platform_device_alloc("soc-audio", -1);
-	if (!u1_snd_device)
+	if (!u1_snd_device) {
+		pr_err("%s: no soc-audio\n", __func__);
 		return -ENOMEM;
+	}
 
 	platform_set_drvdata(u1_snd_device, &u1_snd_card);
 
 	ret = platform_device_add(u1_snd_device);
 	if (ret) {
+		pr_err("%s: failed to add snd_card\n", __func__);
 		platform_device_put(u1_snd_device);
 	}
 	return ret;
