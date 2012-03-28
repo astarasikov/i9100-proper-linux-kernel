@@ -2504,7 +2504,7 @@ static int mc1n2_set_codec_status(struct snd_kcontrol *kcontrol,
 
 	switch(control_data)
 	{
-	case CMD_CODEC_EMERGENCY_RECOVERY:
+	default:
 		mutex_lock(&mc1n2->mutex);
 
 		mc1n2_set_mclk_source(1);
@@ -2563,9 +2563,6 @@ static int mc1n2_set_codec_status(struct snd_kcontrol *kcontrol,
 		mutex_unlock(&mc1n2->mutex);
 
 		dev_info(codec->dev, "%s: Recovery Done\n", __func__);
-		break;
-
-	default:
 		break;
 	}
 
