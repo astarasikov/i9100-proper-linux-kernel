@@ -73,14 +73,14 @@ static int u1_hifi_hw_params(struct snd_pcm_substream *substream,
 				| SND_SOC_DAIFMT_NB_NF
 				| SND_SOC_DAIFMT_CBM_CFM);
 	if (ret < 0)
-		return ret;
+		goto fail;
 
 	/* Set the cpu DAI configuration */
 	ret = snd_soc_dai_set_fmt(cpu_dai, SND_SOC_DAIFMT_I2S
 				| SND_SOC_DAIFMT_NB_NF
 				| SND_SOC_DAIFMT_CBM_CFM);
 	if (ret < 0)
-		return ret;
+		goto fail;
 /* check later
 	ret = snd_soc_dai_set_sysclk(cpu_dai, S3C_I2SV2_CLKSRC_CDCLK,
 				0, SND_SOC_CLOCK_IN);
@@ -95,8 +95,11 @@ static int u1_hifi_hw_params(struct snd_pcm_substream *substream,
 
 	ret = snd_soc_dai_set_clkdiv(codec_dai, MC1N2_BCLK_MULT, MC1N2_LRCK_X32);
 
-	if (ret < 0)
+fail:
+	if (ret < 0) {
+		printk("%s: err ret=%d\n", __func__, ret);
 		return ret;
+	}
 
 	return 0;
 }
@@ -209,22 +212,7 @@ static struct snd_soc_ops u1_hifi_ops = {
 };
 
 static struct snd_soc_dai_link u1_dai[] = {
-#if defined(CONFIG_SND_SAMSUNG_LP) || defined(CONFIG_SND_SAMSUNG_ALP)
-	{ /* Sec_Fifo DAI i/f */
-		.name = "MC1N2 Sec_FIFO TX",
-		.stream_name = "Sec_Dai",
-		.cpu_dai_name = "samsung-i2s.4",
-		.codec_dai_name = "mc1n2-da0i",
-#ifndef CONFIG_SND_SOC_SAMSUNG_USE_DMA_WRAPPER
-		.platform_name = "samsung-audio-idma",
-#else
-		.platform_name = "samsung-audio",
-#endif
-		.codec_name = "mc1n2.6-003a",
-		.init = u1_hifiaudio_init,
-		.ops = &u1_hifi_ops,
-	},
-#endif
+#ifndef CONFIG_SND_SOC_SAMSUNG_I2S_SEC
 	{ /* Primary DAI i/f */
 		.name = "MC1N2 AIF1",
 		.stream_name = "hifiaudio",
@@ -234,7 +222,23 @@ static struct snd_soc_dai_link u1_dai[] = {
 		.codec_name = "mc1n2.6-003a",
 		.init = u1_hifiaudio_init,
 		.ops = &u1_hifi_ops,
-	}
+	},
+#else
+	{ /* Sec_Fifo DAI i/f */
+		.name = "MC1N2 Sec_FIFO TX",
+		.stream_name = "Sec_Dai",
+		.cpu_dai_name = "samsung-i2s.4",
+		.codec_dai_name = "mc1n2-da0i",
+#ifdef CONFIG_SND_SOC_SAMSUNG_USE_DMA_WRAPPER
+		.platform_name = "samsung-audio",
+#else
+		.platform_name = "samsung-audio-idma",
+#endif
+		.codec_name = "mc1n2.6-003a",
+		.init = u1_hifiaudio_init,
+		.ops = &u1_hifi_ops,
+	},
+#endif
 };
 
 static struct snd_soc_card u1_snd_card = {
