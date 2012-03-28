@@ -777,10 +777,6 @@ static struct platform_driver mdnie_driver = {
 	},
 	.probe		= mdnie_probe,
 	.remove		= mdnie_remove,
-#ifndef CONFIG_HAS_EARLYSUSPEND
-	.suspend	= mdnie_suspend,
-	.resume		= mdnie_resume,
-#endif
 	.shutdown	= mdnie_shutdown,
 };
 
