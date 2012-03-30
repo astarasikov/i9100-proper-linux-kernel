@@ -5652,7 +5652,7 @@ static void __init exynos_init_reserve(void)
 	sec_debug_magic_init();
 }
 
-MACHINE_START(SMDKC210, "SMDK4210")
+MACHINE_START(SMDKC210, "i9100")
 	/* Maintainer: Kukjin Kim <kgene.kim@samsung.com> */
 	.boot_params	= S5P_PA_SDRAM + 0x100,
 	.init_irq	= exynos4_init_irq,
