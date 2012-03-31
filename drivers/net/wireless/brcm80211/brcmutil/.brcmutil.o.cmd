@@ -1,1 +1,0 @@
-cmd_drivers/net/wireless/brcm80211/brcmutil/brcmutil.o := /home/alexander/handhelds/armv6/codesourcery/bin/arm-none-eabi-ld -EL    -r -o drivers/net/wireless/brcm80211/brcmutil/brcmutil.o drivers/net/wireless/brcm80211/brcmutil/utils.o 
