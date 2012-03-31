@@ -5478,6 +5478,7 @@ static void __init smdkc210_machine_init(void)
 #ifdef CONFIG_S3C_DEV_HSMMC3
 	s3c_gpio_cfgpin(GPIO_WLAN_EN, S3C_GPIO_OUTPUT);
 	s3c_gpio_setpull(GPIO_WLAN_EN, S3C_GPIO_PULL_NONE);
+	mdelay(50);
 	s3c_sdhci3_set_platdata(&exynos4_hsmmc3_pdata);
 #endif
 
