@@ -1103,14 +1103,14 @@ static struct s3c_sdhci_platdata exynos4_hsmmc2_pdata __initdata = {
 };
 
 static struct s3c_sdhci_platdata exynos4_hsmmc3_pdata __initdata = {
-	.cd_type = S3C_SDHCI_CD_NONE,
+	.cd_type = S3C_SDHCI_CD_PERMANENT,
 	.clk_type = S3C_SDHCI_CLK_DIV_EXTERNAL,
 	.max_width = 4,
 	.host_caps		= MMC_CAP_4_BIT_DATA |
 				MMC_CAP_MMC_HIGHSPEED | MMC_CAP_SD_HIGHSPEED,
 	.cfg_gpio = exynos4_setup_sdhci3_cfg_gpio,
 	
-	.pm_flags = S3C_SDHCI_PM_IGNORE_SUSPEND_RESUME,
+	//.pm_flags = S3C_SDHCI_PM_IGNORE_SUSPEND_RESUME,
 	.cfg_card = exynos4_setup_sdhci_cfg_card,
 };
 
