@@ -57,7 +57,6 @@ obj-$(CONFIG_MACH_UNIVERSAL_C210)	+= mach-universal_c210.o
 obj-$(CONFIG_MACH_U1)			+= mach-u1.o sec-common.o u1-gps.o sec-switch_max8997.o
 obj-$(CONFIG_MACH_U1_BD)		+= u1-gpio.o
 obj-$(CONFIG_MACH_Q1_BD)		+= q1-gpio.o
-obj-$(CONFIG_MACH_U1)			+= u1-wlan.o
 obj-$(CONFIG_MACH_PX)			+= mach-px.o sec-common.o px-gps.o px-switch.o
 obj-$(CONFIG_MACH_P2)			+= p2-gpio.o
 obj-$(CONFIG_MACH_P4)			+= p4-gpio.o
