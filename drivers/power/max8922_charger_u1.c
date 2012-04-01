@@ -41,7 +41,7 @@ static inline int max8922_is_charging(struct max8922_info *info)
 	int ta_nconnected = gpio_get_value(info->pdata->gpio_ta_nconnected);
 	int chg_ing = gpio_get_value(info->pdata->gpio_chg_ing);
 
-	dev_info(info->dev, "%s: charging state = 0x%x\n", __func__,
+	dev_dbg(info->dev, "%s: charging state = 0x%x\n", __func__,
 		 (ta_nconnected << 1) | chg_ing);
 
 	/*return (ta_nconnected == 0 && chg_ing == 0); */
@@ -84,7 +84,7 @@ static int max8922_enable_charging(struct max8922_info *info, bool enable)
 	int gpio_chg_en = info->pdata->gpio_chg_en;
 	unsigned long flags;
 
-	dev_info(info->dev, "%s: %s charging,%s\n", __func__,
+	dev_dbg(info->dev, "%s: %s charging,%s\n", __func__,
 		 enable ? "enable" : "disable",
 		 info->is_usb_cable ? "USB" : "TA");
 
@@ -137,7 +137,7 @@ static irqreturn_t max8922_chg_ing_irq(int irq, void *data)
 	struct max8922_info *info = data;
 	int ret = 0;
 
-	dev_info(info->dev, "chg_ing IRQ occurred!\n");
+	dev_dbg(info->dev, "chg_ing IRQ occurred!\n");
 
 	if (gpio_get_value(info->pdata->gpio_ta_nconnected))
 		return IRQ_HANDLED;

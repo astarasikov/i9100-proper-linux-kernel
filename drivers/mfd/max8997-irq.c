@@ -259,7 +259,7 @@ static irqreturn_t max8997_irq_thread(int irq, void *data)
 		return IRQ_NONE;
 	}
 
-	dev_info(max8997->dev, "%s: irq:%d, irq_src:0x%x\n", __func__,
+	dev_dbg(max8997->dev, "%s: irq:%d, irq_src:0x%x\n", __func__,
 			irq, irq_src);
 
 
@@ -280,15 +280,15 @@ static irqreturn_t max8997_irq_thread(int irq, void *data)
 			dev_err(max8997->dev, "%s: fail to read flash"
 					" status: %d\n", __func__, ret);
 		else {
-			dev_info(max8997->dev, "%s: FLASH Interrupt: 0x%02x\n",
+			dev_dbg(max8997->dev, "%s: FLASH Interrupt: 0x%02x\n",
 					__func__, irq_flash);
 			fled_status = irq_flash & FLED_FLT_MASK;
 		}
 	} else if (irq_src & MAX8997_INTR_FUELGAUGE_MASK) {
-		dev_warn(max8997->dev, "%s: Fuel Gauge interrupt\n", __func__);
+		dev_dbg(max8997->dev, "%s: Fuel Gauge interrupt\n", __func__);
 		msleep(20);
 	} else {
-		dev_warn(max8997->dev, "Unused interrupt source: 0x%x\n",
+		dev_dbg(max8997->dev, "Unused interrupt source: 0x%x\n",
 				irq_src);
 		return IRQ_NONE;
 	}

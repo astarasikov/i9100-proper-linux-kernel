@@ -218,6 +218,9 @@ static void max17042_get_soc(struct i2c_client *client);
 static int max17042_read_vfsoc(struct i2c_client *client)
 {
 	struct max17042_chip *chip = i2c_get_clientdata(client);
+	if (!chip) {
+		return -ENODEV;
+	}
 
 	max17042_get_soc(client);
 
@@ -329,10 +332,26 @@ static int max17042_recalc_soc(struct i2c_client *client, int boot_cnt)
 
 static void max17042_get_soc(struct i2c_client *client)
 {
-	struct max17042_chip *chip = i2c_get_clientdata(client);
+	struct max17042_chip *chip;
 	u8 data[2];
 	int soc;
 	int diff = 0;
+
+	if (!client) {
+		pr_err("%s: client is NULL\n", __func__);
+		return;
+	}
+	chip = i2c_get_clientdata(client);
+
+	if (!chip) {
+		pr_err("%s: chip is NULL\n", __func__);
+		return;
+	}
+
+	if (!chip->pdata) {
+		pr_err("%s: chip->pdata is NULL\n", __func__);
+		return;
+	}
 
 	if (chip->is_enable) {
 		if (max17042_read_reg(client, MAX17042_REG_SOC_VF, data) < 0)
@@ -345,7 +364,7 @@ static void max17042_get_soc(struct i2c_client *client)
 		chip->raw_soc = min(soc / 100, 100);
 
 #ifdef RECAL_SOC_FOR_MAXIM
-		if (chip->pdata->need_soc_recal()) {
+		if (chip->pdata->need_soc_recal && chip->pdata->need_soc_recal()) {
 			dev_info(&client->dev,
 				"%s : recalculate soc\n", __func__);
 
@@ -872,6 +891,11 @@ static int __devinit max17042_probe(struct i2c_client *client,
 	chip = kzalloc(sizeof(*chip), GFP_KERNEL);
 	if (!chip)
 		return -ENOMEM;
+
+	if (!client->dev.platform_data) {
+		dev_err(&client->dev, "%s: no platform_data\n", __func__);
+		return -EINVAL;
+	}
 
 	chip->client = client;
 	chip->pdata = client->dev.platform_data;
