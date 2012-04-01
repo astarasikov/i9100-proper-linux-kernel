@@ -571,7 +571,7 @@ static int max8997_muic_set_usb_path(struct max8997_muic_info *info, int path)
 
 	switch (path) {
 	case AP_USB_MODE:
-		dev_info(info->dev, "%s: AP_USB_MODE\n", __func__);
+		dev_dbg(info->dev, "%s: AP_USB_MODE\n", __func__);
 		gpio_val = 0;
 		accdet = 1;
 
@@ -583,7 +583,7 @@ static int max8997_muic_set_usb_path(struct max8997_muic_info *info, int path)
 		}
 		break;
 	case CP_USB_MODE:
-		dev_info(info->dev, "%s: CP_USB_MODE\n", __func__);
+		dev_dbg(info->dev, "%s: CP_USB_MODE\n", __func__);
 		gpio_val = 1;
 		accdet = 0;
 		/* UT1, UR2 */
@@ -591,7 +591,7 @@ static int max8997_muic_set_usb_path(struct max8997_muic_info *info, int path)
 		cntl1_msk = COMN1SW_MASK | COMP2SW_MASK;
 		break;
 	case AUDIO_MODE:
-		dev_info(info->dev, "%s: AUDIO_MODE\n", __func__);
+		dev_dbg(info->dev, "%s: AUDIO_MODE\n", __func__);
 		gpio_val = 0;
 		accdet = 0;
 		/* SL1, SR2 */
@@ -614,13 +614,13 @@ static int max8997_muic_set_usb_path(struct max8997_muic_info *info, int path)
 			CTRL2_ACCDET_MASK);
 
 	if (!accdet) {
-		dev_info(info->dev, "%s: Set manual path\n", __func__);
+		dev_dbg(info->dev, "%s: Set manual path\n", __func__);
 		max8997_update_reg(client, MAX8997_MUIC_REG_CTRL1, cntl1_val,
 				   cntl1_msk);
 
 		cntl1_val = 0;
 		max8997_read_reg(client, MAX8997_MUIC_REG_CTRL1, &cntl1_val);
-		dev_info(info->dev, "%s: CNTL1(0x%02x)\n", __func__, cntl1_val);
+		dev_dbg(info->dev, "%s: CNTL1(0x%02x)\n", __func__, cntl1_val);
 	}
 
 	return 0;
@@ -707,7 +707,7 @@ static int max8997_muic_handle_dock_vol_key(struct max8997_muic_info *info,
 			return 0;
 	}
 
-	dev_info(info->dev, "%s: dock vol key(%d)\n", __func__, pre_key);
+	dev_dbg(info->dev, "%s: dock vol key(%d)\n", __func__, pre_key);
 
 	switch (adc) {
 	case ADC_DOCK_VOL_UP:
@@ -788,38 +788,38 @@ static int max8997_muic_attach_usb_type(struct max8997_muic_info *info, int adc)
 	switch (adc) {
 	case ADC_JIG_USB_OFF:
 		if (info->cable_type == CABLE_TYPE_JIG_USB_OFF) {
-			dev_info(info->dev, "%s: duplicated(JIG USB OFF)\n",
+			dev_dbg(info->dev, "%s: duplicated(JIG USB OFF)\n",
 					__func__);
 			return 0;
 		}
 
-		dev_info(info->dev, "%s:JIG USB BOOTOFF\n", __func__);
+		dev_dbg(info->dev, "%s:JIG USB BOOTOFF\n", __func__);
 		info->cable_type = CABLE_TYPE_JIG_USB_OFF;
 		path = AP_USB_MODE;
 		break;
 	case ADC_JIG_USB_ON:
 		if (info->cable_type == CABLE_TYPE_JIG_USB_ON) {
-			dev_info(info->dev, "%s: duplicated(JIG USB ON)\n",
+			dev_dbg(info->dev, "%s: duplicated(JIG USB ON)\n",
 					__func__);
 			return 0;
 		}
 
-		dev_info(info->dev, "%s:JIG USB BOOTON\n", __func__);
+		dev_dbg(info->dev, "%s:JIG USB BOOTON\n", __func__);
 		info->cable_type = CABLE_TYPE_JIG_USB_ON;
 		path = AP_USB_MODE;
 		break;
 	case ADC_OPEN:
 		if (info->cable_type == CABLE_TYPE_USB) {
-			dev_info(info->dev, "%s: duplicated(USB)\n", __func__);
+			dev_dbg(info->dev, "%s: duplicated(USB)\n", __func__);
 			return 0;
 		}
 
-		dev_info(info->dev, "%s:USB\n", __func__);
+		dev_dbg(info->dev, "%s:USB\n", __func__);
 		info->cable_type = CABLE_TYPE_USB;
 		path = AP_USB_MODE;
 		break;
 	default:
-		dev_info(info->dev, "%s: Unkown cable(0x%x)\n", __func__, adc);
+		dev_dbg(info->dev, "%s: Unkown cable(0x%x)\n", __func__, adc);
 		return 0;
 	}
 
@@ -855,11 +855,11 @@ static int max8997_muic_attach_dock_type(struct max8997_muic_info *info,
 	case ADC_DESKDOCK:
 		/* Desk Dock */
 		if (info->cable_type == CABLE_TYPE_DESKDOCK) {
-			dev_info(info->dev, "%s: duplicated(DeskDock)\n",
+			dev_dbg(info->dev, "%s: duplicated(DeskDock)\n",
 					__func__);
 			return 0;
 		}
-		dev_info(info->dev, "%s:DeskDock\n", __func__);
+		dev_dbg(info->dev, "%s:DeskDock\n", __func__);
 		info->cable_type = CABLE_TYPE_DESKDOCK;
 		path = AUDIO_MODE;
 
@@ -869,11 +869,11 @@ static int max8997_muic_attach_dock_type(struct max8997_muic_info *info,
 	case ADC_CARDOCK:
 		/* Car Dock */
 		if (info->cable_type == CABLE_TYPE_CARDOCK) {
-			dev_info(info->dev, "%s: duplicated(CarDock)\n",
+			dev_dbg(info->dev, "%s: duplicated(CarDock)\n",
 					__func__);
 			return 0;
 		}
-		dev_info(info->dev, "%s:CarDock\n", __func__);
+		dev_dbg(info->dev, "%s:CarDock\n", __func__);
 		info->cable_type = CABLE_TYPE_CARDOCK;
 		path = AUDIO_MODE;
 
@@ -881,7 +881,7 @@ static int max8997_muic_attach_dock_type(struct max8997_muic_info *info,
 			mdata->cardock_cb(MAX8997_MUIC_ATTACHED);
 		break;
 	default:
-		dev_info(info->dev, "%s: should not reach here(0x%x)\n",
+		dev_dbg(info->dev, "%s: should not reach here(0x%x)\n",
 				__func__, adc);
 		return 0;
 	}
@@ -895,7 +895,7 @@ static void max8997_muic_attach_mhl(struct max8997_muic_info *info, u8 chgtyp)
 {
 	struct max8997_muic_data *mdata = info->muic_data;
 
-	dev_info(info->dev, "%s\n", __func__);
+	dev_dbg(info->dev, "%s\n", __func__);
 
 	if (info->cable_type == CABLE_TYPE_USB) {
 		if (mdata->usb_cb && info->is_usb_ready)
@@ -905,7 +905,7 @@ static void max8997_muic_attach_mhl(struct max8997_muic_info *info, u8 chgtyp)
 	}
 #if 0
 	if (info->cable_type == CABLE_TYPE_MHL) {
-		dev_info(info->dev, "%s: duplicated(MHL)\n", __func__);
+		dev_dbg(info->dev, "%s: duplicated(MHL)\n", __func__);
 		return;
 	}
 #endif
@@ -931,7 +931,7 @@ static void max8997_muic_handle_jig_uart(struct max8997_muic_info *info,
 	bool is_otgtest = false;
 	u8 cntl1_val, cntl1_msk;
 
-	dev_info(info->dev, "%s: JIG UART/BOOTOFF(0x%x)\n", __func__, vbvolt);
+	dev_dbg(info->dev, "%s: JIG UART/BOOTOFF(0x%x)\n", __func__, vbvolt);
 
 	/* UT1, UR2 */
 	cntl1_val = (3 << COMN1SW_SHIFT) | (3 << COMP2SW_SHIFT);
@@ -943,7 +943,7 @@ static void max8997_muic_handle_jig_uart(struct max8997_muic_info *info,
 		if (mdata->host_notify_cb) {
 			if (mdata->host_notify_cb(1) == NOTIFY_TEST_MODE) {
 				is_otgtest = true;
-				dev_info(info->dev, "%s: OTG TEST\n", __func__);
+				dev_dbg(info->dev, "%s: OTG TEST\n", __func__);
 			}
 		}
 
@@ -1041,7 +1041,7 @@ static int max8997_muic_handle_attach(struct max8997_muic_info *info,
 
 		if (chgtyp == CHGTYP_NO_VOLTAGE) {
 			if (info->cable_type == CABLE_TYPE_OTG) {
-				dev_info(info->dev,
+				dev_dbg(info->dev,
 						"%s: duplicated(OTG)\n",
 						__func__);
 				break;
@@ -1056,7 +1056,7 @@ static int max8997_muic_handle_attach(struct max8997_muic_info *info,
 				chgtyp == CHGTYP_DEDICATED_CHGR ||
 				chgtyp == CHGTYP_500MA	||
 				chgtyp == CHGTYP_1A) {
-			dev_info(info->dev, "%s: OTG charging pump\n",
+			dev_dbg(info->dev, "%s: OTG charging pump\n",
 					__func__);
 			ret = max8997_muic_set_charging_type(info, false);
 		}
@@ -1098,7 +1098,7 @@ static int max8997_muic_handle_attach(struct max8997_muic_info *info,
 			if (mdata->is_mhl_attached
 					&& mdata->is_mhl_attached() &&
 					info->cable_type == CABLE_TYPE_MHL) {
-				dev_info(info->dev, "%s: MHL(charging)\n",
+				dev_dbg(info->dev, "%s: MHL(charging)\n",
 						__func__);
 				info->cable_type = CABLE_TYPE_MHL_VB;
 				ret = max8997_muic_set_charging_type(info,
@@ -1111,7 +1111,7 @@ static int max8997_muic_handle_attach(struct max8997_muic_info *info,
 		case CHGTYP_DEDICATED_CHGR:
 		case CHGTYP_500MA:
 		case CHGTYP_1A:
-			dev_info(info->dev, "%s:TA\n", __func__);
+			dev_dbg(info->dev, "%s:TA\n", __func__);
 			info->cable_type = CABLE_TYPE_TA;
 #ifdef CONFIG_USBHUB_USB3803
 			/* setting usb hub in default mode (standby) */
@@ -1164,23 +1164,20 @@ static int max8997_muic_handle_detach(struct max8997_muic_info *info)
 	info->previous_key = DOCK_KEY_NONE;
 
 	if (info->cable_type == CABLE_TYPE_NONE) {
-		dev_info(info->dev, "%s: duplicated(NONE)\n", __func__);
+		dev_dbg(info->dev, "%s: duplicated(NONE)\n", __func__);
 		return 0;
 	}
-#if 0
-	if (mdata->jig_uart_cb)
-		mdata->jig_uart_cb(UART_PATH_AP);
-#endif
+	
 	if (mdata->is_mhl_attached && mdata->is_mhl_attached()
 			&& info->cable_type == CABLE_TYPE_MHL) {
-		dev_info(info->dev, "%s: MHL attached. Do Nothing\n",
+		dev_dbg(info->dev, "%s: MHL attached. Do Nothing\n",
 				__func__);
 		return 0;
 	}
 
 	switch (info->cable_type) {
 	case CABLE_TYPE_OTG:
-		dev_info(info->dev, "%s: OTG\n", __func__);
+		dev_dbg(info->dev, "%s: OTG\n", __func__);
 		info->cable_type = CABLE_TYPE_NONE;
 
 		if (mdata->usb_cb && info->is_usb_ready)
@@ -1189,7 +1186,7 @@ static int max8997_muic_handle_detach(struct max8997_muic_info *info)
 	case CABLE_TYPE_USB:
 	case CABLE_TYPE_JIG_USB_OFF:
 	case CABLE_TYPE_JIG_USB_ON:
-		dev_info(info->dev, "%s: USB(0x%x)\n", __func__,
+		dev_dbg(info->dev, "%s: USB(0x%x)\n", __func__,
 				info->cable_type);
 		prev_ct = info->cable_type;
 		info->cable_type = CABLE_TYPE_NONE;
@@ -1207,7 +1204,7 @@ static int max8997_muic_handle_detach(struct max8997_muic_info *info)
 			mdata->usb_cb(USB_CABLE_DETACHED);
 		break;
 	case CABLE_TYPE_DESKDOCK:
-		dev_info(info->dev, "%s: DESKDOCK\n", __func__);
+		dev_dbg(info->dev, "%s: DESKDOCK\n", __func__);
 		info->cable_type = CABLE_TYPE_NONE;
 
 		ret = max8997_muic_set_charging_type(info, false);
@@ -1220,7 +1217,7 @@ static int max8997_muic_handle_detach(struct max8997_muic_info *info)
 			mdata->deskdock_cb(MAX8997_MUIC_DETACHED);
 		break;
 	case CABLE_TYPE_CARDOCK:
-		dev_info(info->dev, "%s: CARDOCK\n", __func__);
+		dev_dbg(info->dev, "%s: CARDOCK\n", __func__);
 		info->cable_type = CABLE_TYPE_NONE;
 
 		ret = max8997_muic_set_charging_type(info, false);
@@ -1233,33 +1230,33 @@ static int max8997_muic_handle_detach(struct max8997_muic_info *info)
 			mdata->cardock_cb(MAX8997_MUIC_DETACHED);
 		break;
 	case CABLE_TYPE_TA:
-		dev_info(info->dev, "%s: TA\n", __func__);
+		dev_dbg(info->dev, "%s: TA\n", __func__);
 		info->cable_type = CABLE_TYPE_NONE;
 		ret = max8997_muic_set_charging_type(info, false);
 		if (ret)
 			info->cable_type = CABLE_TYPE_TA;
 		break;
 	case CABLE_TYPE_JIG_UART_ON:
-		dev_info(info->dev, "%s: JIG UART/BOOTON\n", __func__);
+		dev_dbg(info->dev, "%s: JIG UART/BOOTON\n", __func__);
 		info->cable_type = CABLE_TYPE_NONE;
 		break;
 	case CABLE_TYPE_JIG_UART_OFF:
-		dev_info(info->dev, "%s: JIG UART/BOOTOFF\n", __func__);
+		dev_dbg(info->dev, "%s: JIG UART/BOOTOFF\n", __func__);
 		info->cable_type = CABLE_TYPE_NONE;
 		break;
 	case CABLE_TYPE_JIG_UART_OFF_VB:
-		dev_info(info->dev, "%s: JIG UART/OFF/VB\n", __func__);
+		dev_dbg(info->dev, "%s: JIG UART/OFF/VB\n", __func__);
 		info->cable_type = CABLE_TYPE_NONE;
 		ret = max8997_muic_set_charging_type(info, false);
 		if (ret)
 			info->cable_type = CABLE_TYPE_JIG_UART_OFF_VB;
 		break;
 	case CABLE_TYPE_MHL:
-		dev_info(info->dev, "%s: MHL\n", __func__);
+		dev_dbg(info->dev, "%s: MHL\n", __func__);
 		info->cable_type = CABLE_TYPE_NONE;
 		break;
 	case CABLE_TYPE_MHL_VB:
-		dev_info(info->dev, "%s: MHL VBUS\n", __func__);
+		dev_dbg(info->dev, "%s: MHL VBUS\n", __func__);
 		info->cable_type = CABLE_TYPE_NONE;
 		max8997_muic_set_charging_type(info, false);
 
@@ -1269,7 +1266,7 @@ static int max8997_muic_handle_detach(struct max8997_muic_info *info)
 		}
 		break;
 	case CABLE_TYPE_UNKNOWN:
-		dev_info(info->dev, "%s: UNKNOWN\n", __func__);
+		dev_dbg(info->dev, "%s: UNKNOWN\n", __func__);
 		info->cable_type = CABLE_TYPE_NONE;
 
 		ret = max8997_muic_set_charging_type(info, false);
@@ -1277,7 +1274,7 @@ static int max8997_muic_handle_detach(struct max8997_muic_info *info)
 			info->cable_type = CABLE_TYPE_UNKNOWN;
 		break;
 	default:
-		dev_info(info->dev, "%s:invalid cable type %d\n",
+		dev_dbg(info->dev, "%s:invalid cable type %d\n",
 				__func__, info->cable_type);
 		break;
 	}
@@ -1299,7 +1296,7 @@ static void max8997_muic_detect_dev(struct max8997_muic_info *info, int irq)
 		return;
 	}
 
-	dev_info(info->dev, "%s: STATUS1:0x%x, 2:0x%x\n", __func__,
+	dev_dbg(info->dev, "%s: STATUS1:0x%x, 2:0x%x\n", __func__,
 			status[0], status[1]);
 
 	if ((irq == info->irq_adc) &&
@@ -1332,16 +1329,16 @@ static void max8997_muic_detect_dev(struct max8997_muic_info *info, int irq)
 				max8997_muic_handle_attach(info, status[0],
 					status[1]);
 				info->is_ovp_state = false;
-				dev_info(info->dev, "OVP recovered\n");
+				dev_dbg(info->dev, "OVP recovered\n");
 				return;
 			} else {
-				dev_info(info->dev, "Just inserted TA/USB\n");
+				dev_dbg(info->dev, "Just inserted TA/USB\n");
 				return;
 			}
 		} else if (irq == info->irq_chgrm) {
 			max8997_muic_handle_detach(info);
 			info->is_ovp_state = true;
-			dev_info(info->dev, "OVP occured\n");
+			dev_dbg(info->dev, "OVP occured\n");
 			return;
 		}
 
@@ -1349,17 +1346,17 @@ static void max8997_muic_detect_dev(struct max8997_muic_info *info, int irq)
 		info->is_ovp_state = false;
 
 		if (irq == info->irq_chgrm) {
-			dev_info(info->dev, "Just removed TA/USB\n");
+			dev_dbg(info->dev, "Just removed TA/USB\n");
 			return;
 		}
 	}
 #endif
 
 	if (intr == INT_ATTACH) {
-		dev_info(info->dev, "%s: ATTACHED\n", __func__);
+		dev_dbg(info->dev, "%s: ATTACHED\n", __func__);
 		max8997_muic_handle_attach(info, status[0], status[1]);
 	} else {
-		dev_info(info->dev, "%s: DETACHED\n", __func__);
+		dev_dbg(info->dev, "%s: DETACHED\n", __func__);
 		max8997_muic_handle_detach(info);
 	}
 	return;
@@ -1389,19 +1386,6 @@ do {									\
 static int max8997_muic_irq_init(struct max8997_muic_info *info)
 {
 	int ret;
-#if 0
-#if !defined(CONFIG_MACH_U1_REV00)
-	dev_info(info->dev, "%s: system_rev=%d\n", __func__, system_rev);
-#if !defined(CONFIG_MACH_P6_REV02) && !defined(CONFIG_MACH_U1_C210) \
-		&& !defined(CONFIG_MACH_U1HD_C210)
-	if (system_rev < 0x3) {
-		dev_info(info->dev,
-			"Caution !!! This system_rev does not support ALL irq\n");
-		return 0;
-	}
-#endif
-#endif
-#endif
 
 	REQUEST_IRQ(info->irq_adc, "muic-adc");
 	REQUEST_IRQ(info->irq_chgtype, "muic-chgtype");
@@ -1429,7 +1413,7 @@ static void max8997_muic_init_detect(struct work_struct *work)
 	struct max8997_muic_info *info = container_of(work,
 			struct max8997_muic_info, init_work.work);
 
-	dev_info(info->dev, "%s\n", __func__);
+	dev_dbg(info->dev, "%s\n", __func__);
 	if (!info->muic_data)
 		return;
 
@@ -1444,7 +1428,7 @@ static void max8997_muic_usb_detect(struct work_struct *work)
 			struct max8997_muic_info, usb_work.work);
 	struct max8997_muic_data *mdata = info->muic_data;
 
-	dev_info(info->dev, "%s\n", __func__);
+	dev_dbg(info->dev, "%s\n", __func__);
 	if (!mdata)
 		return;
 
@@ -1683,7 +1667,7 @@ static int max8997_muic_freeze(struct device *dev)
 	cancel_delayed_work(&info->mhl_work);
 
 	/* hibernation state, disconnect usb state*/
-	dev_info(info->dev, "%s: DETACHED\n", __func__);
+	dev_dbg(info->dev, "%s: DETACHED\n", __func__);
 	mutex_lock(&info->mutex);
 	max8997_muic_handle_detach(info);
 	mutex_unlock(&info->mutex);

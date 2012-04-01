@@ -151,7 +151,7 @@ static int max8997_disable_charging(struct chg_data *chg)
 	int ret;
 	u8 mask;
 
-	dev_info(chg->dev, "%s: disable charging\n", __func__);
+	dev_dbg(chg->dev, "%s: disable charging\n", __func__);
 	mask = MBCHOSTEN_MASK | VCHGR_FC_MASK;
 	ret = max8997_update_reg(i2c, MAX8997_REG_MBCCTRL2, 0, mask);
 	if (ret < 0)
@@ -215,7 +215,7 @@ static int max8997_enable_charging_x(struct chg_data *chg, int charge_type)
 	/* enable charging */
 	if (charge_type == POWER_SUPPLY_CHARGE_TYPE_FAST) {
 		/* ac */
-		dev_info(chg->dev, "%s: TA charging", __func__);
+		dev_dbg(chg->dev, "%s: TA charging", __func__);
 		/* set fast charging current : 650mA */
 		ret = max8997_update_reg(i2c, MAX8997_REG_MBCCTRL4,
 			(9 << MBCICHFC_SHIFT), MBCICHFC_MASK);
@@ -224,7 +224,7 @@ static int max8997_enable_charging_x(struct chg_data *chg, int charge_type)
 
 	} else if (charge_type == POWER_SUPPLY_CHARGE_TYPE_TRICKLE) {
 		/* usb */
-		dev_info(chg->dev, "%s: USB charging", __func__);
+		dev_dbg(chg->dev, "%s: USB charging", __func__);
 		/* set fast charging current : 450mA */
 		ret = max8997_update_reg(i2c, MAX8997_REG_MBCCTRL4,
 				(5 << MBCICHFC_SHIFT), MBCICHFC_MASK);
@@ -317,7 +317,7 @@ static irqreturn_t max8997_chg_topoff_irq(int irq, void *data)
 		return IRQ_HANDLED;
 	}
 
-	dev_info(chg->dev, " Topoff IRQ occurred!\n");
+	dev_dbg(chg->dev, " Topoff IRQ occurred!\n");
 
 	return IRQ_HANDLED;
 }
@@ -330,7 +330,7 @@ static irqreturn_t max8997_chg_charger_irq(int irq, void *data)
 
 	insert = (irq == chg->irq_chgins);
 
-	dev_info(chg->dev, "%s: charger IRQ(%d) occurred!\n", __func__, insert);
+	dev_dbg(chg->dev, "%s: charger IRQ(%d) occurred!\n", __func__, insert);
 
 	if (system_rev >= 0x3)
 		return IRQ_HANDLED;
@@ -344,7 +344,7 @@ static irqreturn_t max8997_chg_charger_irq(int irq, void *data)
 		return IRQ_HANDLED;
 	}
 
-	dev_info(chg->dev, "%s: charger IRQ(%d) occurred!\n", __func__, insert);
+	dev_dbg(chg->dev, "%s: charger IRQ(%d) occurred!\n", __func__, insert);
 
 	return IRQ_HANDLED;
 }
