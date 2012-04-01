@@ -1091,19 +1091,27 @@ static struct s3c_platform_fimc fimc_plat = {
  ******************************************************************************/
 static struct s3c_sdhci_platdata exynos4_hsmmc2_pdata __initdata = {
 	.cd_type = S3C_SDHCI_CD_GPIO,
+	.clk_type = S3C_SDHCI_CLK_DIV_EXTERNAL,
 	.ext_cd_gpio = EXYNOS4_GPX3(4),
 	.ext_cd_gpio_invert = 1,
-	.clk_type = S3C_SDHCI_CLK_DIV_EXTERNAL,
+	.host_caps = MMC_CAP_4_BIT_DATA |
+				MMC_CAP_MMC_HIGHSPEED | MMC_CAP_SD_HIGHSPEED |
+				MMC_CAP_DISABLE,
+	.max_width		= 4,
+	.cfg_gpio = exynos4_setup_sdhci2_cfg_gpio,
 	.vmmc_name = "vtf_2.8v",
 };
 
 static struct s3c_sdhci_platdata exynos4_hsmmc3_pdata __initdata = {
-	.cd_type = S3C_SDHCI_CD_PERMANENT,
+	.cd_type = S3C_SDHCI_CD_NONE,
 	.clk_type = S3C_SDHCI_CLK_DIV_EXTERNAL,
-	.pm_flags = S3C_SDHCI_PM_IGNORE_SUSPEND_RESUME,
+	.max_width = 4,
 	.host_caps		= MMC_CAP_4_BIT_DATA |
 				MMC_CAP_MMC_HIGHSPEED | MMC_CAP_SD_HIGHSPEED,
 	.cfg_gpio = exynos4_setup_sdhci3_cfg_gpio,
+	
+	.pm_flags = S3C_SDHCI_PM_IGNORE_SUSPEND_RESUME,
+	.cfg_card = exynos4_setup_sdhci_cfg_card,
 };
 
 static struct s3c_mshci_platdata exynos4_mshc_pdata __initdata = {
@@ -3515,11 +3523,12 @@ static void __init smdkc210_machine_init(void)
 	__raw_writel((__raw_readl(EXYNOS4_CLKDIV_FSYS1) & 0xfff0fff0)
 		     | 0x90009, EXYNOS4_CLKDIV_FSYS1);
 
-	s3c_sdhci2_set_platdata(&exynos4_hsmmc2_pdata);
-
 	s3c_gpio_cfgpin(GPIO_WLAN_EN, S3C_GPIO_OUTPUT);
 	s3c_gpio_setpull(GPIO_WLAN_EN, S3C_GPIO_PULL_NONE);
+	gpio_direction_output(GPIO_WLAN_EN, 1);
 	mdelay(50);
+	
+	s3c_sdhci2_set_platdata(&exynos4_hsmmc2_pdata);
 	s3c_sdhci3_set_platdata(&exynos4_hsmmc3_pdata);
 
 	s3c_mshci_set_platdata(&exynos4_mshc_pdata);
