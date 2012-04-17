@@ -6419,17 +6419,7 @@ static void __init exynos_init_reserve(void)
 	sec_debug_magic_init();
 }
 
-#ifdef CONFIG_MACH_U1_KOR_SKT
-#define MODEL_NAME "SHW-M250S"
-#elif defined(CONFIG_MACH_U1_KOR_KT)
-#define MODEL_NAME "SHW-M250K"
-#elif defined(CONFIG_MACH_U1_KOR_LGT)
-#define MODEL_NAME "SHW-M250L"
-#else
-#define MODEL_NAME "SMDK4210"
-#endif
-
-MACHINE_START(SMDKC210, MODEL_NAME)
+MACHINE_START(SMDKC210, "i9100")
 	/* Maintainer: Kukjin Kim <kgene.kim@samsung.com> */
 	.boot_params	= S5P_PA_SDRAM + 0x100,
 	.init_irq	= exynos4_init_irq,
