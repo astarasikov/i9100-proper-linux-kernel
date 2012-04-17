@@ -1300,6 +1300,17 @@ static void report_input_data(struct mxt224_data *data)
 	}
 	data->finger_mask = 0;
 	copy_data->touch_state = 0;
+
+	input_report_key(data->input_dev, BTN_TOUCH, touch_is_pressed);
+	for (i = 0; i < data->num_fingers; i++) {
+		if (TSP_STATE_INACTIVE == data->fingers[i].z)
+			continue;
+		input_report_abs(data->input_dev, ABS_X, data->fingers[i].x);
+		input_report_abs(data->input_dev, ABS_Y, data->fingers[i].y);
+		input_report_abs(data->input_dev, ABS_PRESSURE, data->fingers[i].w);
+		break;
+	}
+
 	input_sync(data->input_dev);
 
 	if ((touch_is_pressed == 0) &&
@@ -3369,7 +3380,16 @@ static int __devinit mxt224_probe(struct i2c_client *client,
 	set_bit(EV_ABS, input_dev->evbit);
 	set_bit(EV_KEY, input_dev->evbit);
 	set_bit(MT_TOOL_FINGER, input_dev->keybit);
+	set_bit(BTN_TOUCH, input_dev->keybit);
 	set_bit(INPUT_PROP_DIRECT, input_dev->propbit);
+	
+	/* For single touch */
+	input_set_abs_params(input_dev, ABS_X,
+			     0, pdata->max_x, 0, 0);
+	input_set_abs_params(input_dev, ABS_Y,
+			     0, pdata->max_y, 0, 0);
+	input_set_abs_params(input_dev, ABS_PRESSURE,
+			     0, 255, 0, 0);
 
 	input_mt_init_slots(input_dev, data->num_fingers);
 
