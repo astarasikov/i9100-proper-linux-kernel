@@ -173,7 +173,7 @@ static __init int rndis_do_config(struct usb_configuration *c)
 		c->bmAttributes |= USB_CONFIG_ATT_WAKEUP;
 	}
 
-	ret = rndis_bind_config(c, hostaddr);
+	ret = rndis_bind_config(c, hostaddr, 0, NULL);
 	if (ret < 0)
 		return ret;
 
