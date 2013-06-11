@@ -5517,6 +5517,13 @@ static struct platform_device exynos4_busfreq = {
 };
 #endif
 
+#if defined(CONFIG_MALI_DRM)
+static struct platform_device exynos_mali_drm = {
+	.name = "mali_drm",
+	.id = -1,
+};
+#endif
+
 static struct platform_device *smdkc210_devices[] __initdata = {
 	&exynos4_device_pd[PD_MFC],
 	&exynos4_device_pd[PD_G3D],
@@ -5666,6 +5673,10 @@ static struct platform_device *smdkc210_devices[] __initdata = {
 
 #ifdef CONFIG_S3C64XX_DEV_SPI
 	&exynos_device_spi0,
+#endif
+
+#if defined(CONFIG_MALI_DRM)
+	&exynos_mali_drm,
 #endif
 
 /* mainline fimd */
