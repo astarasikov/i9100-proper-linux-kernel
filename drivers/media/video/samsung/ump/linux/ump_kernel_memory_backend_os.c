@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010 ARM Limited. All rights reserved.
+ * Copyright (C) 2010-2011 ARM Limited. All rights reserved.
  * 
  * This program is free software and is provided to you under the terms of the GNU General Public License version 2
  * as published by the Free Software Foundation, and any use by you of this program is subject to the terms of such GNU licence.
@@ -77,8 +77,6 @@ ump_memory_backend * ump_os_memory_backend_create(const int max_allocation)
 	backend->stat = os_stat;
 	backend->pre_allocate_physical_check = NULL;
 	backend->adjust_to_mali_phys = NULL;
-	backend->get = NULL;
-	backend->set = NULL;
 
 	return backend;
 }
@@ -142,10 +140,10 @@ static int os_allocate(void* ctx, ump_dd_mem * descriptor)
 
 		if (is_cached)
 		{
-			new_page = alloc_page(GFP_KERNEL | __GFP_ZERO | __GFP_NORETRY | __GFP_NOWARN );
+			new_page = alloc_page(GFP_HIGHUSER | __GFP_ZERO | __GFP_REPEAT | __GFP_NOWARN);
 		} else
 		{
-			new_page = alloc_page(GFP_KERNEL | __GFP_ZERO | __GFP_NORETRY | __GFP_NOWARN | __GFP_COLD);
+			new_page = alloc_page(GFP_HIGHUSER | __GFP_ZERO | __GFP_REPEAT | __GFP_NOWARN | __GFP_COLD);
 		}
 		if (NULL == new_page)
 		{

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010 ARM Limited. All rights reserved.
+ * Copyright (C) 2010-2012 ARM Limited. All rights reserved.
  * 
  * This program is free software and is provided to you under the terms of the GNU General Public License version 2
  * as published by the Free Software Foundation, and any use by you of this program is subject to the terms of such GNU licence.
@@ -147,6 +147,9 @@ _mali_osk_errcode_t _ump_ukk_open( void** context )
 
 	*context = (void*)session_data;
 
+	session_data->cache_operations_ongoing = 0 ;
+	session_data->has_pending_level1_cache_flush = 0;
+
 	DBG_MSG(2, ("New session opened\n"));
 
 	return _MALI_OSK_ERR_OK;
@@ -279,12 +282,6 @@ _mali_osk_errcode_t _ump_ukk_map_mem( _ump_uk_map_mem_s *args )
 		descriptor->is_cached = 1;
 		args->is_cached       = 1;
 		DBG_MSG(3, ("Mapping UMP secure_id: %d as cached.\n", args->secure_id));
-	}
-	else if ( args->is_cached)
-	{
-		mem->is_cached = 1;
-		descriptor->is_cached = 1;
-		DBG_MSG(3, ("Warning mapping UMP secure_id: %d. As cached, while it was allocated uncached.\n", args->secure_id));
 	}
 	else
 	{

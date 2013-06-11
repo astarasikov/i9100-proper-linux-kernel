@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010 ARM Limited. All rights reserved.
+ * Copyright (C) 2010-2012 ARM Limited. All rights reserved.
  * 
  * This program is free software and is provided to you under the terms of the GNU General Public License version 2
  * as published by the Free Software Foundation, and any use by you of this program is subject to the terms of such GNU licence.
@@ -21,8 +21,8 @@
 #include "arch/config.h"             /* Configuration for current platform. The symlinc for arch is set by Makefile */
 #include "ump_ioctl.h"
 #include "ump_kernel_common.h"
-#include "ump_kernel_interface.h"
-#include "ump_kernel_interface_ref_drv.h"
+#include <ump/ump_kernel_interface.h>
+#include <ump/ump_kernel_interface_ref_drv.h>
 #include "ump_kernel_descriptor_mapping.h"
 #include "ump_kernel_memory_backend.h"
 #include "ump_kernel_memory_backend_os.h"
@@ -35,19 +35,14 @@
 #include "ump_ukk_wrappers.h"
 #include "ump_ukk_ref_wrappers.h"
 
-#ifdef CONFIG_ION_EXYNOS
-#include <linux/ion.h>
-extern struct ion_device *ion_exynos;
-struct ion_client *ion_client_ump = NULL;
-#endif
 
 /* Module parameter to control log level */
-int ump_debug_level = 3;
+int ump_debug_level = 2;
 module_param(ump_debug_level, int, S_IRUSR | S_IWUSR | S_IWGRP | S_IRGRP | S_IROTH); /* rw-rw-r-- */
 MODULE_PARM_DESC(ump_debug_level, "Higher number, more dmesg output");
 
 /* By default the module uses any available major, but it's possible to set it at load time to a specific number */
-int ump_major = 243;
+int ump_major = 0;
 module_param(ump_major, int, S_IRUGO); /* r--r--r-- */
 MODULE_PARM_DESC(ump_major, "Device major number");
 
@@ -55,7 +50,9 @@ MODULE_PARM_DESC(ump_major, "Device major number");
 static char ump_dev_name[] = "ump"; /* should be const, but the functions we call requires non-cost */
 
 
+#if UMP_LICENSE_IS_GPL
 static struct dentry *ump_debugfs_dir = NULL;
+#endif
 
 /*
  * The data which we attached to each virtual memory mapping request we get.
@@ -90,9 +87,6 @@ static int ump_file_ioctl(struct inode *inode, struct file *filp, unsigned int c
 #endif
 static int ump_file_mmap(struct file * filp, struct vm_area_struct * vma);
 
-#ifdef CONFIG_VIDEO_MALI400MP
-extern int map_errcode( _mali_osk_errcode_t err );
-#endif
 
 /* This variable defines the file operations this UMP device driver offer */
 static struct file_operations ump_fops =
@@ -137,11 +131,6 @@ static int ump_initialize_module(void)
  */
 static void ump_cleanup_module(void)
 {
-#ifdef CONFIG_ION_EXYNOS
-	if (ion_client_ump)
-	    ion_client_destroy(ion_client_ump);
-#endif
-
 	DBG_MSG(2, ("Unloading UMP device driver\n"));
 	ump_kernel_destructor();
 	DBG_MSG(2, ("Module unloaded\n"));
@@ -171,6 +160,7 @@ int ump_kernel_device_initialize(void)
 {
 	int err;
 	dev_t dev = 0;
+#if UMP_LICENSE_IS_GPL
 	ump_debugfs_dir = debugfs_create_dir(ump_dev_name, NULL);
 	if (ERR_PTR(-ENODEV) == ump_debugfs_dir)
 	{
@@ -180,6 +170,7 @@ int ump_kernel_device_initialize(void)
 	{
 		debugfs_create_file("memory_usage", 0400, ump_debugfs_dir, NULL, &ump_memory_usage_fops);
 	}
+#endif
 
 	if (0 == ump_major)
 	{
@@ -257,8 +248,10 @@ void ump_kernel_device_terminate(void)
 	/* free major */
 	unregister_chrdev_region(dev, 1);
 
+#if UMP_LICENSE_IS_GPL
 	if(ump_debugfs_dir)
 		debugfs_remove_recursive(ump_debugfs_dir);
+#endif
 }
 
 /*
@@ -346,11 +339,6 @@ static int ump_file_ioctl(struct inode *inode, struct file *filp, unsigned int c
 		case UMP_IOC_ALLOCATE :
 			err = ump_allocate_wrapper((u32 __user *)argument, session_data);
 			break;
-#ifdef CONFIG_ION_EXYNOS
-		case UMP_IOC_ION_IMPORT:
-			err = ump_ion_import_wrapper((u32 __user *)argument, session_data);
-			break;
-#endif
 
 		case UMP_IOC_RELEASE:
 			err = ump_release_wrapper((u32 __user *)argument, session_data);
@@ -364,6 +352,22 @@ static int ump_file_ioctl(struct inode *inode, struct file *filp, unsigned int c
 			err = ump_msync_wrapper((u32 __user *)argument, session_data);
 			break;
 
+		case UMP_IOC_CACHE_OPERATIONS_CONTROL:
+			err = ump_cache_operations_control_wrapper((u32 __user *)argument, session_data);
+			break;
+
+		case UMP_IOC_SWITCH_HW_USAGE:
+			err = ump_switch_hw_usage_wrapper((u32 __user *)argument, session_data);
+			break;
+
+		case UMP_IOC_LOCK:
+			err = ump_lock_wrapper((u32 __user *)argument, session_data);
+			break;
+
+		case UMP_IOC_UNLOCK:
+			err = ump_unlock_wrapper((u32 __user *)argument, session_data);
+			break;
+
 		default:
 			DBG_MSG(1, ("No handler for IOCTL. cmd: 0x%08x, arg: 0x%08lx\n", cmd, arg));
 			err = -EFAULT;
@@ -373,8 +377,7 @@ static int ump_file_ioctl(struct inode *inode, struct file *filp, unsigned int c
 	return err;
 }
 
-#ifndef CONFIG_VIDEO_MALI400MP
-int map_errcode( _mali_osk_errcode_t err )
+/*int map_errcode( _mali_osk_errcode_t err )
 {
     switch(err)
     {
@@ -388,8 +391,7 @@ int map_errcode( _mali_osk_errcode_t err )
         case _MALI_OSK_ERR_ITEM_NOT_FOUND: return -ENOENT;
         default: return -EFAULT;
     }
-}
-#endif
+}*/
 
 /*
  * Handle from OS to map specified virtual memory to specified UMP memory.
@@ -402,7 +404,7 @@ static int ump_file_mmap(struct file * filp, struct vm_area_struct * vma)
 
 	/* Validate the session data */
 	session_data = (struct ump_session_data *)filp->private_data;
-	if (NULL == session_data || NULL == session_data->cookies_map->table->mappings)
+	if (NULL == session_data)
 	{
 		MSG_ERR(("mmap() called without any session data available\n"));
 		return -EFAULT;
@@ -422,6 +424,8 @@ static int ump_file_mmap(struct file * filp, struct vm_area_struct * vma)
 		vma->vm_flags = vma->vm_flags | VM_SHARED | VM_MAYSHARE  ;
 		DBG_MSG(3, ("UMP Map function: Forcing the CPU to use cache\n"));
 	}
+	/* By setting this flag, during a process fork; the child process will not have the parent UMP mappings */
+	vma->vm_flags |= VM_DONTCOPY;
 
 	DBG_MSG(4, ("UMP vma->flags: %x\n", vma->vm_flags ));
 
@@ -445,16 +449,12 @@ EXPORT_SYMBOL(ump_dd_phys_blocks_get);
 EXPORT_SYMBOL(ump_dd_size_get);
 EXPORT_SYMBOL(ump_dd_reference_add);
 EXPORT_SYMBOL(ump_dd_reference_release);
-EXPORT_SYMBOL(ump_dd_meminfo_get);
-EXPORT_SYMBOL(ump_dd_meminfo_set);
-EXPORT_SYMBOL(ump_dd_handle_get_from_vaddr);
 
 /* Export our own extended kernel space allocator */
 EXPORT_SYMBOL(ump_dd_handle_create_from_phys_blocks);
 
 /* Setup init and exit functions for this module */
-//module_init(ump_initialize_module);
-arch_initcall(ump_initialize_module);
+module_init(ump_initialize_module);
 module_exit(ump_cleanup_module);
 
 /* And some module informatio */
