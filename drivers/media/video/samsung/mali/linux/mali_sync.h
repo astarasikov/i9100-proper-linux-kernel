@@ -16,7 +16,7 @@
 #ifndef _MALI_SYNC_H_
 #define _MALI_SYNC_H_
 
-#ifdef CONFIG_SYNC_MALI
+#ifdef CONFIG_SYNC
 
 #include <linux/seq_file.h>
 #include <linux/sync.h>
@@ -73,5 +73,5 @@ struct sync_pt *mali_sync_pt_alloc(struct sync_timeline *parent);
  */
 void mali_sync_signal_pt(struct sync_pt *pt, int error);
 
-#endif /* CONFIG_SYNC_MALI */
+#endif /* CONFIG_SYNC */
 #endif /* _MALI_SYNC_H_ */

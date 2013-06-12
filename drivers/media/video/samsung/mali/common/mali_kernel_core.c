@@ -1031,7 +1031,7 @@ _mali_osk_errcode_t _mali_ukk_open(void **context)
 		MALI_ERROR(_MALI_OSK_ERR_NOMEM);
 	}
 
-#ifdef CONFIG_SYNC_MALI
+#ifdef CONFIG_SYNC
 	_mali_osk_list_init(&session->pending_jobs);
 	session->pending_jobs_lock = _mali_osk_lock_init(_MALI_OSK_LOCKFLAG_NONINTERRUPTABLE | _MALI_OSK_LOCKFLAG_ORDERED | _MALI_OSK_LOCKFLAG_SPINLOCK,
 	                                                 0, _MALI_OSK_LOCK_ORDER_SESSION_PENDING_JOBS);
@@ -1070,7 +1070,7 @@ _mali_osk_errcode_t _mali_ukk_close(void **context)
 	mali_session_remove(session);
 
 	/* Abort pending jobs */
-#ifdef CONFIG_SYNC_MALI
+#ifdef CONFIG_SYNC
 	{
 		_mali_osk_list_t tmp_job_list;
 		struct mali_pp_job *job, *tmp;

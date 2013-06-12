@@ -18,7 +18,7 @@
 #include "mali_kernel_common.h"
 #include "regs/mali_200_regs.h"
 #include "mali_kernel_core.h"
-#ifdef CONFIG_SYNC_MALI
+#ifdef CONFIG_SYNC
 #include <linux/sync.h>
 #endif
 #include "mali_dlbu.h"
@@ -44,7 +44,7 @@ struct mali_pp_job
 	u32 pid;                                           /**< Process ID of submitting process */
 	u32 tid;                                           /**< Thread ID of submitting thread */
 	_mali_osk_notification_t *finished_notification;   /**< Notification sent back to userspace on job complete */
-#ifdef CONFIG_SYNC_MALI
+#ifdef CONFIG_SYNC
 	mali_sync_pt *sync_point;                          /**< Sync point to signal on completion */
 	struct sync_fence_waiter sync_waiter;              /**< Sync waiter for async wait */
 	_mali_osk_wq_work_t *sync_work;                    /**< Work to schedule in callback */

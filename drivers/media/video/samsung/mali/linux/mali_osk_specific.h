@@ -24,10 +24,10 @@
 #define MALI_STATIC_INLINE static inline
 #define MALI_NON_STATIC_INLINE inline
 
-#ifdef CONFIG_SYNC_MALI
+#ifdef CONFIG_SYNC
 typedef struct sync_timeline mali_sync_tl;
 typedef struct sync_pt mali_sync_pt;
-#endif /* CONFIG_SYNC_MALI */
+#endif /* CONFIG_SYNC */
 
 MALI_STATIC_INLINE u32 _mali_osk_copy_from_user(void *to, void *from, u32 n)
 {

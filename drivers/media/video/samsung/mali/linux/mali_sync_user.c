@@ -13,7 +13,7 @@
  *
  */
 
-#ifdef CONFIG_SYNC_MALI
+#ifdef CONFIG_SYNC
 
 #include <linux/sched.h>
 #include <linux/fdtable.h>
@@ -153,4 +153,4 @@ _mali_osk_errcode_t mali_fence_validate(int fd)
 	}
 }
 
-#endif /* CONFIG_SYNC_MALI */
+#endif /* CONFIG_SYNC */

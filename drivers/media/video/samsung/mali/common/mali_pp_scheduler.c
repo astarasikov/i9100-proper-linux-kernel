@@ -19,7 +19,7 @@
 #include "mali_group.h"
 #include "mali_pm.h"
 
-#if defined(CONFIG_SYNC_MALI)
+#if defined(CONFIG_SYNC)
 #define MALI_PP_SCHEDULER_USE_DEFERRED_JOB_DELETE 1
 #endif
 
@@ -646,7 +646,7 @@ void mali_pp_scheduler_job_done(struct mali_group *group, struct mali_pp_job *jo
 		MALI_DEBUG_PRINT(4, ("Mali PP scheduler: All parts completed for %s job %u (0x%08X)\n",
 		                     mali_pp_job_is_virtual(job) ? "virtual" : "physical",
 		                     mali_pp_job_get_id(job), job));
-#if defined(CONFIG_SYNC_MALI)
+#if defined(CONFIG_SYNC)
 		if (job->sync_point)
 		{
 			int error;
@@ -918,7 +918,7 @@ MALI_STATIC_INLINE void mali_pp_scheduler_queue_job(struct mali_pp_job *job, str
 	mali_pp_scheduler_unlock();
 }
 
-#if defined(CONFIG_SYNC_MALI)
+#if defined(CONFIG_SYNC)
 static void sync_callback(struct sync_fence *fence, struct sync_fence_waiter *waiter)
 {
 	struct mali_pp_job *job = _MALI_OSK_CONTAINER_OF(waiter, struct mali_pp_job, sync_waiter);
@@ -968,7 +968,7 @@ _mali_osk_errcode_t _mali_ukk_pp_start_job(void *ctx, _mali_uk_pp_start_job_s *u
 {
 	struct mali_session_data *session;
 	struct mali_pp_job *job;
-#if defined(CONFIG_SYNC_MALI)
+#if defined(CONFIG_SYNC)
 	int post_fence = -1;
 #endif
 
@@ -998,7 +998,7 @@ _mali_osk_errcode_t _mali_ukk_pp_start_job(void *ctx, _mali_uk_pp_start_job_s *u
 	return _MALI_OSK_ERR_OK;
 #endif
 
-#if defined(CONFIG_SYNC_MALI)
+#if defined(CONFIG_SYNC)
 	if (_MALI_PP_JOB_FLAG_FENCE & job->uargs.flags)
 	{
 		job->sync_point = mali_stream_create_point(job->uargs.stream);
@@ -1093,7 +1093,7 @@ _mali_osk_errcode_t _mali_ukk_pp_start_job(void *ctx, _mali_uk_pp_start_job_s *u
 
 	}
 	else
-#endif /* CONFIG_SYNC_MALI */
+#endif /* CONFIG_SYNC */
 	{
 		mali_pp_scheduler_queue_job(job, session);
 

@@ -81,7 +81,7 @@ struct mali_pp_job *mali_pp_job_create(struct mali_session_data *session, _mali_
 		job->sub_job_errors = 0;
 		job->pid = _mali_osk_get_pid();
 		job->tid = _mali_osk_get_tid();
-#if defined(CONFIG_SYNC_MALI)
+#if defined(CONFIG_SYNC)
 		job->sync_point = NULL;
 		job->pre_fence = NULL;
 		job->sync_work = NULL;
@@ -95,7 +95,7 @@ struct mali_pp_job *mali_pp_job_create(struct mali_session_data *session, _mali_
 
 void mali_pp_job_delete(struct mali_pp_job *job)
 {
-#ifdef CONFIG_SYNC_MALI
+#ifdef CONFIG_SYNC
 	if (NULL != job->pre_fence) sync_fence_put(job->pre_fence);
 	if (NULL != job->sync_point) sync_fence_put(job->sync_point->fence);
 #endif

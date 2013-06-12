@@ -11,12 +11,13 @@
 #ifndef __ARCH_CONFIG_UMP_H__
 #define __ARCH_CONFIG_UMP_H__
 
+#define USING_MEMORY 1
+#define UMP_MEM_SIZE 256
+
 #define ARCH_UMP_BACKEND_DEFAULT          	USING_MEMORY
-#if (USING_MEMORY == 0) /* Dedicated Memory */
-#define ARCH_UMP_MEMORY_ADDRESS_DEFAULT   	0x2C000000
-#else
 #define ARCH_UMP_MEMORY_ADDRESS_DEFAULT   	0
-#endif
+
 
 #define ARCH_UMP_MEMORY_SIZE_DEFAULT 		UMP_MEM_SIZE*1024*1024
+
 #endif /* __ARCH_CONFIG_UMP_H__ */

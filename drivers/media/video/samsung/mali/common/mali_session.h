@@ -20,7 +20,7 @@ struct mali_session_data
 {
 	_mali_osk_notification_queue_t * ioctl_queue;
 
-#ifdef CONFIG_SYNC_MALI
+#ifdef CONFIG_SYNC
 	_mali_osk_list_t pending_jobs;
 	_mali_osk_lock_t *pending_jobs_lock;
 #endif

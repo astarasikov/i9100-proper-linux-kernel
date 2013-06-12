@@ -104,7 +104,7 @@ int get_user_settings_wrapper(struct mali_session_data *session_data, _mali_uk_g
 	return 0;
 }
 
-#ifdef CONFIG_SYNC_MALI
+#ifdef CONFIG_SYNC
 int stream_create_wrapper(struct mali_session_data *session_data, _mali_uk_stream_create_s __user *uargs)
 {
 	_mali_uk_stream_create_s kargs;

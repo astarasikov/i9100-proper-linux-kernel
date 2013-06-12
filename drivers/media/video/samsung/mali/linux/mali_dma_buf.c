@@ -106,6 +106,7 @@ static void mali_dma_buf_release(void *ctx, void *handle)
 
 		MALI_DEBUG_ASSERT(0 == _mali_osk_atomic_read(&mem->ref));
 
+		//dma_buf_unmap_attachment(mem->attachment, mem->sgt, DMA_BIDIRECTIONAL);
 		dma_buf_unmap_attachment(mem->attachment, mem->sgt);
 
 		dma_buf_detach(mem->buf, mem->attachment);

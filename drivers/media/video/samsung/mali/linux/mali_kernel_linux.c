@@ -675,12 +675,12 @@ static int mali_ioctl(struct inode *inode, struct file *filp, unsigned int cmd, 
 			break;
 
 		case MALI_IOC_STREAM_CREATE:
-#if defined(CONFIG_SYNC_MALI)
+#if defined(CONFIG_SYNC)
 			err = stream_create_wrapper(session_data, (_mali_uk_stream_create_s __user *)arg);
 			break;
 #endif
 		case MALI_IOC_FENCE_VALIDATE:
-#if defined(CONFIG_SYNC_MALI)
+#if defined(CONFIG_SYNC)
 			err = sync_fence_validate_wrapper(session_data, (_mali_uk_fence_validate_s __user *)arg);
 			break;
 #else
