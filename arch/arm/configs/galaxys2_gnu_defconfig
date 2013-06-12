@@ -2020,6 +2020,7 @@ CONFIG_FB_S5P_LD9040=y
 # CONFIG_FB_S1D13XXX is not set
 # CONFIG_FB_TMIO is not set
 # CONFIG_FB_S3C is not set
+CONFIG_ODROID_UMP=y
 # CONFIG_S5P_MIPI_DSI2 is not set
 # CONFIG_FB_UDL is not set
 # CONFIG_FB_VIRTUAL is not set
